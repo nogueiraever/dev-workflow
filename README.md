@@ -4,19 +4,17 @@ Autonomous feature development workflow with persistent markdown tracking, plan 
 
 ## Install
 
-One-liner:
-
 ```bash
-curl -sSL https://raw.githubusercontent.com/nogueiraever/dev-workflow/main/install.sh | bash
-```
-
-Or manually:
-
-```bash
-git clone https://github.com/nogueiraever/dev-workflow.git ~/.claude/plugins/dev-workflow
+git clone git@github.com:nogueiraever/dev-workflow.git ~/.claude/plugins/dev-workflow
 ```
 
 Restart Claude Code after installing. No per-project setup needed.
+
+To update:
+
+```bash
+git -C ~/.claude/plugins/dev-workflow pull
+```
 
 ## Usage
 

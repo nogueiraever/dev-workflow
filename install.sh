@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PLUGIN_DIR="$HOME/.claude/plugins/dev-workflow"
-REPO_URL="https://github.com/nogueiraever/dev-workflow.git"
+REPO_URL="git@github.com:nogueiraever/dev-workflow.git"
 
 echo "Installing dev-workflow plugin for Claude Code..."
 
