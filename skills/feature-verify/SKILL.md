@@ -21,7 +21,7 @@ This runs only Phase 5 of the feature workflow: Verification.
 
 `$ARGUMENTS` must contain a feature name. If empty, ask for one.
 
-Check that `docs/features/<name>/` exists. If not, suggest `/feature new <name>`.
+Check that `docs/features/<name>/` exists. If not, suggest `/feature <name>`.
 
 ### 2. Verify Preconditions
 

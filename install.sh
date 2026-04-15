@@ -1,31 +1,50 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PLUGIN_DIR="$HOME/.claude/plugins/dev-workflow"
-REPO_URL="git@github.com:nogueiraever/dev-workflow.git"
+SKILLS_DIR="$HOME/.claude/skills"
+WORKFLOW_DIR="$HOME/.dev-workflow"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SKILLS=("feature" "feature-init" "feature-tasks" "feature-execute" "feature-verify" "feature-setup")
 
-echo "Installing dev-workflow plugin for Claude Code..."
+echo "Installing dev-workflow for Claude Code..."
 
-# Check for git
-if ! command -v git &>/dev/null; then
-  echo "Error: git is required but not installed."
-  exit 1
+# Clean up old plugin locations
+for old in "$HOME/.claude/plugins/dev-workflow" "$HOME/.claude/plugins/marketplaces/claude-plugins-official/plugins/dev-workflow"; do
+  if [ -L "$old" ] || [ -d "$old" ]; then
+    rm -rf "$old"
+  fi
+done
+
+# Symlink each skill into ~/.claude/skills/
+mkdir -p "$SKILLS_DIR"
+for skill in "${SKILLS[@]}"; do
+  target="$SKILLS_DIR/$skill"
+  if [ -L "$target" ] || [ -d "$target" ]; then
+    rm -rf "$target"
+  fi
+  ln -s "$SCRIPT_DIR/skills/$skill" "$target"
+  echo "  skill: $skill"
+done
+
+# Copy workflow infrastructure and templates to user root
+echo ""
+if [ -d "$WORKFLOW_DIR" ]; then
+  echo "Updating $WORKFLOW_DIR..."
+  rm -rf "$WORKFLOW_DIR"
 fi
-
-# Install or update
-if [ -d "$PLUGIN_DIR" ]; then
-  echo "Updating existing installation..."
-  git -C "$PLUGIN_DIR" pull --ff-only
-else
-  echo "Cloning to $PLUGIN_DIR..."
-  mkdir -p "$(dirname "$PLUGIN_DIR")"
-  git clone "$REPO_URL" "$PLUGIN_DIR"
-fi
+cp -R "$SCRIPT_DIR/.dev-workflow" "$WORKFLOW_DIR"
+cp -R "$SCRIPT_DIR/docs" "$WORKFLOW_DIR/docs"
+echo "  workflow: $WORKFLOW_DIR"
 
 echo ""
-echo "Installed to: $PLUGIN_DIR"
+echo "Installed:"
+echo "  ${#SKILLS[@]} skills  -> $SKILLS_DIR"
+echo "  templates   -> $WORKFLOW_DIR/docs/features/_template/"
+echo "  agents      -> $WORKFLOW_DIR/agents/"
+echo "  prompts     -> $WORKFLOW_DIR/prompts/"
+echo "  rules       -> $WORKFLOW_DIR/rules/"
 echo ""
 echo "Restart Claude Code, then use:"
-echo "  /feature new <name>    — start a new feature"
+echo "  /feature <name>    — start a new feature"
 echo "  /feature resume <name> — resume an existing feature"
 echo "  /feature               — list active features"

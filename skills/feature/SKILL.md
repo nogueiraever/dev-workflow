@@ -1,7 +1,7 @@
 ---
 name: feature
-description: "Autonomous feature development workflow. Manages the full SDLC lifecycle: intake, planning (with approval gate), task generation, parallel/sequential execution, verification, and closeout. All state persisted in markdown under docs/features/. Resumable across sessions. Use: /feature new <name>, /feature resume <name>, or /feature to list active features. Triggers on: start feature, new feature, resume feature, continue feature, feature status."
-argument-hint: "[new <feature-name> | resume <feature-name> | status]"
+description: "Autonomous feature development workflow. Manages the full SDLC lifecycle: intake, planning (with approval gate), task generation, parallel/sequential execution, verification, and closeout. All state persisted in markdown under docs/features/. Resumable across sessions. Use: /feature <name> to start or resume a feature, or /feature to list active features. Triggers on: start feature, new feature, resume feature, continue feature, feature status."
+argument-hint: "[<feature-name> | resume <feature-name>]"
 allowed-tools:
   - Read
   - Write
@@ -33,7 +33,7 @@ All workflow infrastructure is bundled with this plugin. The skill's [references
 
 Read the phase reference and agent role before entering each phase.
 
-**Feature templates** are also bundled with the plugin at `docs/features/_template/` (relative to the plugin root). `/feature new` locates and copies them automatically.
+**Feature templates** are installed at `~/.dev-workflow/docs/features/_template/`. `/feature <name>` locates and copies them automatically.
 
 ## Core Rules
 
@@ -50,28 +50,25 @@ Read [rules.md](references/rules.md) for the complete set. The critical ones:
 
 Parse `$ARGUMENTS` to determine mode:
 
-### `/feature new <name>`
+### `/feature <name>` — smart routing (start or resume)
 1. Slugify the name: lowercase, replace spaces with hyphens, remove special chars
-2. Check if `docs/features/<slug>/` already exists — if so, tell user and suggest resume
-3. Locate the feature templates. Check in order:
-   - `docs/features/_template/` in the project root (if `/feature-setup` was used)
-   - `~/.claude/plugins/dev-workflow/docs/features/_template/` (plugin bundle)
-4. Create `docs/features/<slug>/` in the project and copy all template files into it
-5. In each copied file, replace `{{feature-name}}` with the actual feature name and `{{timestamp}}` with current ISO timestamp
-6. Begin **Phase 1: Intake**
+2. Check if `docs/features/<slug>/` already exists:
+   - **Exists** → resume: read all feature files, parse `current_phase` from `progress.md`, follow [resume algorithm](references/resume.md), continue from that phase
+   - **Does not exist** → create new feature:
+     1. Locate templates: check `docs/features/_template/` in project root, then `~/.dev-workflow/docs/features/_template/`
+     2. Create `docs/features/<slug>/` and copy all template files into it
+     3. In each file, replace `{{feature-name}}` with the feature name and `{{timestamp}}` with current ISO timestamp
+     4. Begin **Phase 1: Intake**
 
-### `/feature resume <name>`
-1. Check if `docs/features/<name>/` exists — if not, tell user and suggest new
+### `/feature resume <name>` — explicit resume
+1. Check if `docs/features/<name>/` exists — if not, tell user and suggest `/feature <name>`
 2. Follow the [resume algorithm](references/resume.md)
 3. Read all feature files, determine current phase, continue from there
 
-### `/feature status`
+### `/feature` (no arguments) — status
 1. List all directories under `docs/features/` (excluding `_template`)
 2. For each, read `progress.md` frontmatter and display: name, current_phase, last_updated
 3. Ask if the user wants to resume one or start a new feature
-
-### `/feature` (no arguments)
-1. Same as `/feature status` — list features and ask what to do
 
 ---
 
@@ -168,7 +165,7 @@ For execution phase resume: also parse `current_task` and task statuses to find 
 
 ## Error Handling
 
-- **Feature directory not found:** Suggest `/feature new <name>`
+- **Feature directory not found:** Suggest `/feature <name>`
 - **Corrupted progress.md:** Reconstruct state from tasks.md and plan.md. Log decision.
 - **Sub-agent failure:** Log the failure, mark task as blocked, continue with next available task
 - **All tasks blocked:** Stop and report to user with diagnostics

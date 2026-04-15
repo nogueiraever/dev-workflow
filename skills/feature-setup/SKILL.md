@@ -1,6 +1,6 @@
 ---
 name: feature-setup
-description: "Initialize the feature workflow in the current project. Copies .ai-workflow/ (orchestrator, agents, prompts, rules) and docs/features/_template/ (tracking templates) into the project. Run this once per project before using /feature. Safe to re-run — only copies missing files."
+description: "Initialize the feature workflow in the current project. Copies .dev-workflow/ (orchestrator, agents, prompts, rules) and docs/features/_template/ (tracking templates) into the project. Run this once per project before using /feature. Safe to re-run — only copies missing files."
 argument-hint: "[--force]"
 allowed-tools:
   - Read
@@ -17,7 +17,7 @@ Initialize the autonomous feature workflow in the current project.
 
 Copies two directory trees from the plugin bundle into the current project:
 
-1. **`.ai-workflow/`** — orchestrator, agents, prompts, and rules that guide the workflow
+1. **`.dev-workflow/`** — orchestrator, agents, prompts, and rules that guide the workflow
 2. **`docs/features/_template/`** — markdown templates used to create feature tracking files
 
 These files must exist in the project for `/feature` to work.
@@ -32,23 +32,23 @@ The plugin root is the directory containing `.claude-plugin/plugin.json`. Find i
 Plugin root = ../../  (relative to skills/feature-setup/SKILL.md)
 ```
 
-Use bash to resolve the absolute path. Look for the directory that contains both `.claude-plugin/` and `.ai-workflow/`.
+Use bash to resolve the absolute path. Look for the directory that contains both `.claude-plugin/` and `.dev-workflow/`.
 
 ### Step 2: Check Current State
 
 Check if the target project already has:
-- `.ai-workflow/` directory
+- `.dev-workflow/` directory
 - `docs/features/_template/` directory
 
 If `$ARGUMENTS` contains `--force`, overwrite existing files.
 Otherwise, skip files that already exist and only copy missing ones.
 
-### Step 3: Copy .ai-workflow/
+### Step 3: Copy .dev-workflow/
 
-Copy from the plugin's bundled `.ai-workflow/` directory to the project root:
+Copy from the plugin's bundled `.dev-workflow/` directory to the project root:
 
 ```
-.ai-workflow/
+.dev-workflow/
 ├── orchestrators/feature-orchestrator.md
 ├── agents/
 │   ├── planner.md
@@ -91,11 +91,11 @@ Tell the user what was copied:
 Feature workflow initialized in [project-root]:
 
 Copied:
-  .ai-workflow/           — orchestrator, agents, prompts, rules
+  .dev-workflow/           — orchestrator, agents, prompts, rules
   docs/features/_template/ — feature tracking templates
 
 You can now use:
-  /feature new <name>     — start a new feature
+  /feature <name>     — start a new feature
   /feature resume <name>  — resume an existing feature
   /feature                — list active features
 ```
@@ -106,4 +106,4 @@ If some files were skipped (already existed), list them.
 
 - This is safe to re-run. Without `--force`, it only adds missing files.
 - With `--force`, it overwrites everything (useful after plugin updates).
-- The `.ai-workflow/` files are reference material — you can customize them per project after copying.
+- The `.dev-workflow/` files are reference material — you can customize them per project after copying.

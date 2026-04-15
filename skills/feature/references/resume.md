@@ -80,7 +80,7 @@ Then proceed with that action.
 
 ## Edge Cases
 
-- **Feature directory doesn't exist:** Tell the user. Suggest `/feature new <name>` instead.
+- **Feature directory doesn't exist:** Tell the user. Suggest `/feature <name>` instead.
 - **progress.md is corrupted/missing frontmatter:** Read tasks.md and plan.md to infer state. Reconstruct progress.md. Log decision.
 - **All tasks done but phase is still `executing`:** Transition to `verifying`.
 - **Feature was never approved:** If plan.md status is `draft` and progress says `intake` or `planning`, restart from the appropriate phase.

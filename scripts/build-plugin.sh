@@ -28,7 +28,7 @@ cp -R "$REPO_ROOT/.claude-plugin" "$OUTPUT_DIR/.claude-plugin"
 cp -R "$REPO_ROOT/skills" "$OUTPUT_DIR/skills"
 
 # --- Workflow infrastructure (bundled for /feature-setup to copy into projects) ---
-cp -R "$REPO_ROOT/.ai-workflow" "$OUTPUT_DIR/.ai-workflow"
+cp -R "$REPO_ROOT/.dev-workflow" "$OUTPUT_DIR/.dev-workflow"
 
 # --- Feature templates (bundled for /feature-setup to copy into projects) ---
 mkdir -p "$OUTPUT_DIR/docs/features"

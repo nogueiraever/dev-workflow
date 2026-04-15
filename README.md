@@ -5,23 +5,21 @@ Autonomous feature development workflow with persistent markdown tracking, plan 
 ## Install
 
 ```bash
-git clone git@github.com:nogueiraever/dev-workflow.git ~/.claude/plugins/dev-workflow
+git clone git@github.com:nogueiraever/dev-workflow.git
+cd dev-workflow
+./install.sh
 ```
 
-Restart Claude Code after installing. No per-project setup needed.
+This clones the repo and symlinks it into `~/.claude/plugins/dev-workflow`. Restart Claude Code after installing. No per-project setup needed.
 
-To update:
-
-```bash
-git -C ~/.claude/plugins/dev-workflow pull
-```
+To update, just `git pull` in the cloned repo — the symlink keeps the plugin current.
 
 ## Usage
 
 ### Start a new feature
 
 ```
-/feature new auth-refactor
+/feature auth-refactor
 ```
 
 Describe what you want to build. The workflow will:

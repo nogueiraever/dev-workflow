@@ -38,7 +38,7 @@ From executable tasks:
 
 For each task in a parallel batch, launch a sub-agent with:
 - The task definition (ID, title, description, linked plan items, notes)
-- The implementer agent role (from `.ai-workflow/agents/implementer.md`)
+- The implementer agent role (from `.dev-workflow/agents/implementer.md`)
 - Relevant file paths and code context
 - Project conventions
 
