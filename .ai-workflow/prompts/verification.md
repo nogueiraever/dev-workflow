@@ -1,0 +1,69 @@
+# Verification Prompt
+
+You are executing Phase 5 of the autonomous feature workflow. All tasks are done. You must now verify the implementation against acceptance criteria.
+
+## Context
+
+Read:
+- `acceptance-criteria.md` — the criteria to verify against
+- `tasks.md` — confirm all tasks are done
+- `plan.md` — verify scope coverage
+- `decisions.md` — understand any deviations
+
+## Instructions
+
+### Step 1: Verify Task Completion
+
+Check `tasks.md`:
+- Are all tasks `done`?
+- Any still `in_progress` or `todo`? → return to execution
+- Any `blocked`? → can the blocker be resolved now?
+
+### Step 2: Verify Each Acceptance Criterion
+
+Walk through `acceptance-criteria.md` section by section:
+
+For each criterion:
+1. Read the criterion
+2. Find the corresponding implementation in the codebase
+3. Verify it works as specified:
+   - Code behavior: read and trace the logic
+   - UI criteria: check component renders correctly
+   - API criteria: verify endpoint exists with correct signature
+   - Validation criteria: check validation logic exists
+4. Update status: `passed` | `failed` | `skipped`
+5. If `failed`: note what's wrong
+
+### Step 3: Run Automated Checks
+
+If the project has automated tooling:
+- Tests: `pnpm test`, `npm test`, `dotnet test`
+- Type checking: `pnpm tsc`, `npm run tsc`
+- Linting: `pnpm lint`, `npm run lint`
+
+Report results. Failing tests related to the feature are blocking.
+
+### Step 4: Check for Regressions
+
+- Did any existing tests break?
+- Were unrelated files modified?
+- Any TODO/FIXME comments left in new code?
+
+### Step 5: Assess and Route
+
+**All criteria pass, no gaps:**
+- Update `progress.md`: `current_phase: closeout`
+- Proceed to closeout
+
+**Gaps found:**
+- Generate follow-up tasks in `tasks.md` for each gap
+- Link to failed acceptance criteria
+- Update `progress.md`: `current_phase: executing`
+- Return to execution phase
+
+## Output
+
+- Each criterion in `acceptance-criteria.md` has a status (no `pending` remaining)
+- `progress.md` updated with verification results
+- Follow-up tasks created if gaps found
+- Clear routing: closeout or back to execution
