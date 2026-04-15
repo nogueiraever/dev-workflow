@@ -22,24 +22,22 @@ allowed-tools:
                               (only pause point)     ←── autonomous after approval ──→
 ```
 
-## Prerequisites
-
-Before first use, run `/feature-setup` to initialize the project. This copies `.ai-workflow/` and `docs/features/_template/` into the project. If these directories are missing when `/feature` is invoked, tell the user to run `/feature-setup` first.
-
 ## Workflow Resources
 
-This skill is backed by the `.ai-workflow/` directory in the project root, which contains the full workflow infrastructure:
+All workflow infrastructure is bundled with this plugin. The skill's [references/](references/) directory contains:
 
-- **Orchestrator:** `.ai-workflow/orchestrators/feature-orchestrator.md` — full state machine and phase coordination
-- **Rules:** `.ai-workflow/rules/core-rules.md` — the 10 non-negotiable rules
-- **Agents:** `.ai-workflow/agents/` — planner, task-breaker, implementer, reviewer, verifier, tracker
-- **Prompts:** `.ai-workflow/prompts/` — feature-intake, plan-generation, task-generation, execution-engine, verification, resume-feature
+- **Rules:** [rules.md](references/rules.md) — the 10 non-negotiable rules
+- **Phase instructions:** [phase-intake.md](references/phase-intake.md), [phase-planning.md](references/phase-planning.md), [phase-tasks.md](references/phase-tasks.md), [phase-execution.md](references/phase-execution.md), [phase-verification.md](references/phase-verification.md), [phase-closeout.md](references/phase-closeout.md)
+- **Agent roles:** [planner](references/agents/planner.md), [task-breaker](references/agents/task-breaker.md), [implementer](references/agents/implementer.md), [reviewer](references/agents/reviewer.md), [verifier](references/agents/verifier.md), [tracker](references/agents/tracker.md)
+- **Resume algorithm:** [resume.md](references/resume.md)
 
-Read the orchestrator for full phase details. Read agent files before entering each phase. Read prompts for step-by-step instructions.
+Read the phase reference and agent role before entering each phase.
+
+**Feature templates** are also bundled with the plugin at `docs/features/_template/` (relative to the plugin root). `/feature new` locates and copies them automatically.
 
 ## Core Rules
 
-Read `.ai-workflow/rules/core-rules.md` and [rules.md](references/rules.md) for the complete set. The critical ones:
+Read [rules.md](references/rules.md) for the complete set. The critical ones:
 1. **Markdown is source of truth** — always read feature files before acting
 2. **No undefined work** — add to plan/tasks before executing
 3. **Autonomous after approval** — don't ask permission per task after plan is approved
@@ -55,9 +53,12 @@ Parse `$ARGUMENTS` to determine mode:
 ### `/feature new <name>`
 1. Slugify the name: lowercase, replace spaces with hyphens, remove special chars
 2. Check if `docs/features/<slug>/` already exists — if so, tell user and suggest resume
-3. Create the feature directory by copying all files from `docs/features/_template/`
-4. In each copied file, replace `{{feature-name}}` with the actual feature name and `{{timestamp}}` with current ISO timestamp
-5. Begin **Phase 1: Intake**
+3. Locate the feature templates. Check in order:
+   - `docs/features/_template/` in the project root (if `/feature-setup` was used)
+   - `~/.claude/plugins/dev-workflow/docs/features/_template/` (plugin bundle)
+4. Create `docs/features/<slug>/` in the project and copy all template files into it
+5. In each copied file, replace `{{feature-name}}` with the actual feature name and `{{timestamp}}` with current ISO timestamp
+6. Begin **Phase 1: Intake**
 
 ### `/feature resume <name>`
 1. Check if `docs/features/<name>/` exists — if not, tell user and suggest new
@@ -177,15 +178,11 @@ For execution phase resume: also parse `current_task` and task statuses to find 
 
 ## File Paths
 
-All paths are relative to the repo root:
-
-**Feature data (runtime state):**
-- Templates: `docs/features/_template/`
+**Feature data (per-project, relative to project root):**
 - Features: `docs/features/<feature-name>/`
 - Files per feature: `plan.md`, `tasks.md`, `acceptance-criteria.md`, `progress.md`, `decisions.md`
 
-**Workflow infrastructure:**
-- Orchestrator: `.ai-workflow/orchestrators/feature-orchestrator.md`
-- Rules: `.ai-workflow/rules/core-rules.md`
-- Agents: `.ai-workflow/agents/{planner,task-breaker,implementer,reviewer,verifier,tracker}.md`
-- Prompts: `.ai-workflow/prompts/{feature-intake,plan-generation,task-generation,execution-engine,verification,resume-feature}.md`
+**Workflow infrastructure (bundled with plugin):**
+- All references, agents, phases, and rules are in this skill's `references/` directory
+- Templates are in `docs/features/_template/` relative to the plugin root
+- No project-level setup required
