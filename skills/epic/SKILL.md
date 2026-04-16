@@ -1,7 +1,7 @@
 ---
 name: epic
 description: "Manage epics — large initiatives that group related stories. Create, list, resume, and track epics with linked story status. When creating with a Jira ID, automatically imports child stories from Jira. Use: /epic create, /epic list, /epic <id>, /epic status <id>, /epic resume <id>."
-argument-hint: "[create [--id ID] [--title TITLE] [--no-import] | list | status <id> | resume <id> | <id>]"
+argument-hint: "[create [--id ID] [--title TITLE] [--no-import] [--no-plan] | plan <id> | list | status <id> | resume <id> | <id>]"
 allowed-tools:
   - Read
   - Write
@@ -9,6 +9,7 @@ allowed-tools:
   - Bash
   - Glob
   - Grep
+  - Agent
   - mcp__claude_ai_Atlassian__getAccessibleAtlassianResources
   - mcp__claude_ai_Atlassian__getJiraIssue
   - mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql
@@ -39,14 +40,19 @@ Epics are lightweight containers — no phase state machine. Status is managed m
 
 Parse `$ARGUMENTS` to determine the subcommand:
 
-### `/epic create [--id ID] [--title "TITLE"] [--no-import]` — create a new epic
+### `/epic create [--id ID] [--title "TITLE"] [--no-import] [--no-plan]` — create a new epic
 1. Parse flags:
    - `--id` for external ID (e.g., Jira epic key like `HRAB-7000`)
    - `--title` for epic title
    - `--no-import` to skip fetching stories from Jira
+   - `--no-plan` to skip planning imported stories (just scaffold directories)
 2. If `--title` is missing and `--id` is external, the title may be fetched from Jira during import
 3. If `--title` is still missing after import, ask the user for a title
 4. Follow the **Create Flow** below
+
+### `/epic plan <id>` — plan all unplanned stories in an epic
+1. Resolve `<id>` to an epic path via **ID Resolution**
+2. Follow the **Plan Flow** below
 
 ### `/epic list` — list all epics
 1. Follow the **List Flow** below
@@ -129,6 +135,7 @@ If conditions are not met, skip to Step 7.
 Follow the **Jira Import Flow** defined below. This will:
 - Enrich `epic.md` with Jira data (summary, description, metadata)
 - Import child stories as local story directories
+- Plan each imported story (unless `--no-plan` was specified)
 - Update the slug/directory name if a title was fetched from Jira and no `--title` was provided
 
 ### 7. Initialize or update docs/progress.md
@@ -143,11 +150,20 @@ Follow the **Jira Import Flow** defined below. This will:
 
 ### 8. Present to the user
 
-**If stories were imported from Jira:**
+**If stories were imported AND planned:**
 - Display the epic: ID, title, Jira status, owner, path
-- Display a table of imported stories: ID, Title, Jira Status, Local Phase
+- Display a table of imported stories: ID, Title, Jira Status, Local Phase, Key Scope Items
 - If any stories were skipped (already existed locally), list them separately
-- Ask: "Would you like to resume one of the imported stories?"
+- If any stories failed planning, list them with the reason
+- Present plans for approval (same flow as Plan Flow Step 6):
+  - "approve all" → advance all to `task_generation`
+  - Request changes to specific stories → suggest `/story resume <id>`
+
+**If stories were imported but NOT planned (--no-plan):**
+- Display the epic: ID, title, Jira status, owner, path
+- Display a table of imported stories: ID, Title, Jira Status, Local Phase (`intake`)
+- Note: "Stories have been imported but not yet planned."
+- Suggest: `/epic plan {id}` to plan all stories, or `/story resume <id>` to plan individually
 
 **If no stories were found in Jira:**
 - Display the epic
@@ -255,15 +271,145 @@ For each story in the "to import" list:
    - Set `story` field to the story ID
    - Add initial decision D1: "Story imported from Jira epic {epic_id}" with reason "Automated import during epic creation"
 
-### Step 6: Update epic.md Linked Stories Table
+### Step 6: Plan Imported Stories (conditional)
 
-After all stories are created, update the **Linked Stories** table in `epic.md`:
+**Skip this step if `--no-plan` was specified.** Stories will remain in `intake` phase, ready to be planned later via `/epic plan <id>` or `/story resume <id>`.
+
+When `--no-plan` is NOT set, plan each imported story by running the planner agent:
+
+1. **Explore the codebase once** — before planning individual stories, read the project's `CLAUDE.md`, understand the project structure, tech stack, conventions, and existing patterns. This context is shared across all story plans.
+
+2. **Plan stories using sub-agents** — launch one sub-agent per story using the `Agent` tool. Each sub-agent receives:
+   - The story's `story.md` content (with Jira description already populated in Summary/Context)
+   - The epic's `epic.md` content (for overall goals/scope context)
+   - The planner agent role from [planner.md](../story/references/agents/planner.md)
+   - The phase-planning instructions from [phase-planning.md](../story/references/phase-planning.md)
+   - Project context: CLAUDE.md content, relevant file paths, conventions
+   - Instruction: "Plan this story. Fill in all plan sections of story.md (Scope, Out of Scope, Affected Pages/Modules, Related Backend Contracts/APIs, Assumptions, Dependencies, Risks, Implementation Plan). Generate acceptance-criteria.md. Do NOT ask clarifying questions — use the Jira description and codebase exploration to make reasonable assumptions and document them."
+
+   **Parallelism:** Launch up to 3 story planning sub-agents in parallel. When a batch completes, launch the next batch. This balances speed with resource usage.
+
+3. **Each sub-agent must:**
+   - Explore the codebase to find affected files, patterns, and related functionality
+   - Fill all plan sections in `story.md` based on the Jira description + codebase analysis
+   - Generate testable acceptance criteria in `acceptance-criteria.md`
+   - Update `story.md` frontmatter: `current_phase: pending_approval`
+   - Log the phase transitions in the Phase History table
+   - Log any significant assumptions in `decisions.md`
+
+4. **After all sub-agents complete:**
+   - Update `docs/progress.md` Phase column for each planned story (set to `pending_approval`)
+   - Collect any sub-agent errors and report them (partial planning is acceptable)
+
+Stories that fail planning remain in `intake` phase and can be planned later.
+
+### Step 7: Update epic.md Linked Stories Table
+
+After all stories are created (and optionally planned), update the **Linked Stories** table in `epic.md`:
 
 ```markdown
-| {story_id} | {story_title} | active | intake | {owner} |
+| {story_id} | {story_title} | active | {phase} | {owner} |
 ```
 
+Where `{phase}` is `pending_approval` if the story was planned, or `intake` if planning was skipped or failed.
+
 Also update the `last_updated` frontmatter field.
+
+---
+
+## Plan Flow
+
+Plan all unplanned stories within an epic. Triggered by `/epic plan <id>`.
+
+### 1. Load Epic State
+
+1. Read `epic.md` from the resolved path
+2. Read `docs/progress.md`
+3. Scan the Stories table for rows where **Epic** = this epic's ID
+4. Filter for stories in `intake` or `planning` phase — these are the **unplanned stories**
+5. If no unplanned stories found, report: "All stories in {epic_id} are already planned or beyond planning." and stop.
+
+### 2. Display Planning Summary
+
+Present to the user:
+```
+## Planning Stories for Epic {id}: {title}
+
+Found {N} unplanned stories:
+
+| ID | Title | Current Phase |
+|----|-------|---------------|
+| ... | ... | ... |
+
+I'll explore the codebase and generate implementation plans for each story.
+```
+
+### 3. Explore the Codebase
+
+Before planning individual stories, gather shared context:
+- Read the project's `CLAUDE.md` files for conventions and structure
+- Understand the tech stack, build system, testing patterns
+- Identify the areas of the codebase most relevant to this epic's goals
+- This context will be provided to all story planning sub-agents
+
+### 4. Plan Stories Using Sub-Agents
+
+For each unplanned story, launch a sub-agent using the `Agent` tool:
+
+Each sub-agent receives:
+- The story's `story.md` content
+- The epic's `epic.md` content (goals, scope context)
+- The planner agent role from [planner.md](../story/references/agents/planner.md)
+- The phase-planning instructions from [phase-planning.md](../story/references/phase-planning.md)
+- Project context gathered in Step 3
+- Instruction: "Plan this story. Fill in all plan sections of story.md (Scope, Out of Scope, Affected Pages/Modules, Related Backend Contracts/APIs, Assumptions, Dependencies, Risks, Implementation Plan). Generate acceptance-criteria.md. Do NOT ask clarifying questions — use the story description and codebase exploration to make reasonable assumptions and document them."
+
+**Parallelism:** Launch up to 3 sub-agents in parallel. When a batch completes, launch the next batch.
+
+Each sub-agent must:
+- Explore the codebase for affected files, patterns, existing functionality
+- Fill all plan sections in `story.md`
+- Generate testable acceptance criteria in `acceptance-criteria.md`
+- Update `story.md` frontmatter: `current_phase: pending_approval`
+- Log phase transitions in the Phase History table
+- Log significant assumptions in `decisions.md`
+
+### 5. Update Global State
+
+After all sub-agents complete:
+- Update `docs/progress.md` Phase column for each planned story
+- Update `epic.md` Linked Stories table with current phases
+- Update `last_updated` timestamps
+
+### 6. Present Results for Approval
+
+Present a summary of all planned stories:
+
+```
+## Planning Complete for Epic {id}: {title}
+
+Planned {N} stories:
+
+| ID | Title | Key Scope Items | Risks |
+|----|-------|----------------|-------|
+| ... | ... | ... | ... |
+
+{If any stories failed planning, list them here with the reason}
+
+Full plans are in each story's story.md file. You can:
+- Review and approve individual plans with `/story resume <id>`
+- Approve all plans at once by responding "approve all"
+- Request changes to specific stories
+```
+
+**If the user responds "approve all":**
+- For each planned story, update `story.md` frontmatter: `current_phase: task_generation`
+- Update `docs/progress.md` Phase column for all approved stories
+- Log the approval in each story's Phase History
+
+**If the user requests changes to specific stories:**
+- Note which stories need changes
+- Suggest: `/story resume <id>` for each story that needs revision
 
 ---
 
@@ -279,6 +425,7 @@ Also update the `last_updated` frontmatter field.
    - Completion stats (e.g., "3/7 stories complete")
 5. If all linked stories have status `complete`, suggest marking the epic as complete
 6. Offer actions:
+   - If there are stories in `intake` or `planning` phase: "Plan unplanned stories with `/epic plan {id}`"
    - Create a new story in this epic
    - Resume an existing story (list incomplete ones)
    - Update epic status

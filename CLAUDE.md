@@ -180,7 +180,8 @@ On `/story resume <id>`:
 - `/story status <id>` — Detailed story status
 
 ### Epic commands
-- `/epic create [--id X] [--title "Z"] [--no-import]` — Create an epic. When `--id` is an external Jira ID, automatically fetches epic details and imports all child stories from Jira. Use `--no-import` to skip Jira fetch.
+- `/epic create [--id X] [--title "Z"] [--no-import] [--no-plan]` — Create an epic. When `--id` is an external Jira ID, automatically fetches epic details, imports all child stories, and plans each story (fills plan sections, generates acceptance criteria). Use `--no-import` to skip Jira fetch, `--no-plan` to import without planning.
+- `/epic plan <id>` — Plan all unplanned stories in an epic. Runs the planner on each story in `intake`/`planning` phase, filling implementation details and acceptance criteria. Plans are presented for batch approval.
 - `/epic resume <id>` — Show epic with linked stories
 - `/epic list` — List all epics
 
