@@ -1,6 +1,6 @@
 ---
 name: feature-setup
-description: "Initialize the feature workflow in the current project. Copies .dev-workflow/ (orchestrator, agents, prompts, rules) and docs/features/_template/ (tracking templates) into the project. Run this once per project before using /feature. Safe to re-run — only copies missing files."
+description: "[DEPRECATED] Use /workflow-setup instead. Redirects to the /workflow-setup command."
 argument-hint: "[--force]"
 allowed-tools:
   - Read
@@ -9,101 +9,19 @@ allowed-tools:
   - Glob
 ---
 
-# Feature Workflow Setup
+# Deprecated — Use /workflow-setup
 
-Initialize the autonomous feature workflow in the current project.
+> **This command is deprecated.** The `/feature-setup` command has been replaced by `/workflow-setup`.
 
-## What This Does
+## Migration
 
-Copies two directory trees from the plugin bundle into the current project:
+| Old command | New command |
+|-------------|------------|
+| `/feature-setup` | `/workflow-setup` |
+| `/feature-setup --force` | `/workflow-setup --force` |
 
-1. **`.dev-workflow/`** — orchestrator, agents, prompts, and rules that guide the workflow
-2. **`docs/features/_template/`** — markdown templates used to create feature tracking files
+## Redirect behavior
 
-These files must exist in the project for `/feature` to work.
-
-## Process
-
-### Step 1: Locate Plugin Root
-
-The plugin root is the directory containing `.claude-plugin/plugin.json`. Find it by navigating up from this skill's location:
-
-```
-Plugin root = ../../  (relative to skills/feature-setup/SKILL.md)
-```
-
-Use bash to resolve the absolute path. Look for the directory that contains both `.claude-plugin/` and `.dev-workflow/`.
-
-### Step 2: Check Current State
-
-Check if the target project already has:
-- `.dev-workflow/` directory
-- `docs/features/_template/` directory
-
-If `$ARGUMENTS` contains `--force`, overwrite existing files.
-Otherwise, skip files that already exist and only copy missing ones.
-
-### Step 3: Copy .dev-workflow/
-
-Copy from the plugin's bundled `.dev-workflow/` directory to the project root:
-
-```
-.dev-workflow/
-├── orchestrators/feature-orchestrator.md
-├── agents/
-│   ├── planner.md
-│   ├── task-breaker.md
-│   ├── implementer.md
-│   ├── reviewer.md
-│   ├── verifier.md
-│   └── tracker.md
-├── prompts/
-│   ├── feature-intake.md
-│   ├── plan-generation.md
-│   ├── task-generation.md
-│   ├── execution-engine.md
-│   ├── verification.md
-│   └── resume-feature.md
-└── rules/
-    └── core-rules.md
-```
-
-### Step 4: Copy docs/features/_template/
-
-Copy from the plugin's bundled `docs/features/_template/` to the project:
-
-```
-docs/features/_template/
-├── plan.md
-├── tasks.md
-├── acceptance-criteria.md
-├── progress.md
-└── decisions.md
-```
-
-Also ensure `docs/features/` directory exists (where actual feature data will live).
-
-### Step 5: Report
-
-Tell the user what was copied:
-
-```
-Feature workflow initialized in [project-root]:
-
-Copied:
-  .dev-workflow/           — orchestrator, agents, prompts, rules
-  docs/features/_template/ — feature tracking templates
-
-You can now use:
-  /feature <name>     — start a new feature
-  /feature resume <name>  — resume an existing feature
-  /feature                — list active features
-```
-
-If some files were skipped (already existed), list them.
-
-## Notes
-
-- This is safe to re-run. Without `--force`, it only adds missing files.
-- With `--force`, it overwrites everything (useful after plugin updates).
-- The `.dev-workflow/` files are reference material — you can customize them per project after copying.
+1. Print deprecation notice to the user
+2. Pass all arguments through to `/workflow-setup`
+3. Proceed with the full `/workflow-setup` skill behavior as defined in `skills/workflow-setup/SKILL.md`

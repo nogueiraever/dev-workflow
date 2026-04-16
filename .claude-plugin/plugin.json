@@ -1,7 +1,7 @@
 {
-  "name": "feature-workflow",
-  "description": "Autonomous feature development workflow for Claude Code. Manages the full SDLC lifecycle with persistent markdown tracking, plan approval gates, parallel/sequential task execution, and cross-session resumability.",
-  "version": "1.0.0",
+  "name": "dev-workflow",
+  "description": "Autonomous story-driven development workflow for Claude Code. Manages the full SDLC lifecycle with epic/story/task hierarchy, Jira-style ID support, persistent markdown tracking, plan approval gates, parallel/sequential task execution, and cross-session resumability.",
+  "version": "2.0.0",
   "author": {
     "name": "HR Acuity",
     "email": "enogueira@hracuity.com"

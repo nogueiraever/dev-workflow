@@ -1,6 +1,6 @@
-# Feature Workflow Plugin for Claude Code
+# Dev Workflow Plugin for Claude Code
 
-Autonomous feature development workflow with persistent markdown tracking, plan approval gates, parallel/sequential task execution, and cross-session resumability.
+Autonomous story-driven development workflow with persistent markdown tracking, plan approval gates, parallel/sequential task execution, and cross-session resumability. Supports Jira-style external IDs, epic grouping, and multi-developer parallel work.
 
 ## Install
 
@@ -10,22 +10,38 @@ cd dev-workflow
 ./install.sh
 ```
 
-This clones the repo and symlinks it into `~/.claude/plugins/dev-workflow`. Restart Claude Code after installing. No per-project setup needed.
+This symlinks skills into `~/.claude/skills/` and copies workflow infrastructure to `~/.dev-workflow/`. Restart Claude Code after installing.
 
 To update, just `git pull` in the cloned repo — the symlink keeps the plugin current.
 
+## Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Epic** | Large initiative grouping related stories. Optional. |
+| **Story** | Main delivery unit. Goes through the full SDLC lifecycle. |
+| **Task** | Smallest implementation unit, tracked inside a story. |
+
+Stories can be standalone or belong to an epic. Both external IDs (e.g., `HRAB-7026`) and auto-generated internal IDs (e.g., `S1`) are supported.
+
 ## Usage
 
-### Start a new feature
+### Start a new story
 
 ```
-/feature auth-refactor
+/story create --id HRAB-7026 --epic HRAB-7000 --title "Global progress tracking"
 ```
 
-Describe what you want to build. The workflow will:
+Or without external IDs (auto-generates `S1`, `S2`, etc.):
+
+```
+/story create --title "Quick login copy fix"
+```
+
+The workflow will:
 
 1. **Intake** — explore your codebase, ask clarifying questions if needed
-2. **Plan** — generate `plan.md` + `acceptance-criteria.md`, present for your approval
+2. **Plan** — fill `story.md` plan sections + generate `acceptance-criteria.md`, present for your approval
 3. **Tasks** — break the plan into tasks with dependencies and parallel/sequential classification
 4. **Execute** — run tasks autonomously, updating tracking docs continuously
 5. **Verify** — validate against acceptance criteria
@@ -33,21 +49,39 @@ Describe what you want to build. The workflow will:
 
 The plan approval is the only pause point. After you approve, execution is fully autonomous.
 
-### Resume in a new session
+### Resume a story
 
 ```
-/feature resume auth-refactor
+/story resume HRAB-7026
 ```
 
-Reads the markdown tracking files and picks up exactly where the previous session left off.
+Or just use the ID directly (smart routing):
+
+```
+/story HRAB-7026
+```
+
+Resolves the story from `docs/progress.md` and picks up exactly where the previous session left off.
 
 ### Check status
 
 ```
-/feature
+/story list
 ```
 
-Lists all active features and their current phase.
+Lists all stories with their current phase, owner, and epic association.
+
+### Create an epic
+
+```
+/epic create --id HRAB-7000 --title "Team collaboration"
+```
+
+Then create stories within it:
+
+```
+/story create --id HRAB-7026 --epic HRAB-7000 --title "Global progress tracking"
+```
 
 ### Manual entrypoints
 
@@ -55,24 +89,55 @@ For when you want to run a single phase:
 
 | Command | Phase |
 |---------|-------|
-| `/feature-init <name>` | Intake + planning only |
-| `/feature-tasks <name>` | Task generation only |
-| `/feature-execute <name>` | Execution only |
-| `/feature-verify <name>` | Verification only |
+| `/story-init <id>` | Intake + planning only |
+| `/story-tasks <id>` | Task generation only |
+| `/story-execute <id>` | Execution only |
+| `/story-verify <id>` | Verification only |
 
-## How it works
+### Project setup
 
-All state is tracked in markdown files under `docs/features/<name>/`:
+```
+/workflow-setup
+```
+
+One-time command to initialize workflow infrastructure in your project (copies `.dev-workflow/`, creates `docs/progress.md`, `epics/`, `stories/` directories).
+
+## File structure
+
+```
+project/
+├── docs/
+│   └── progress.md                    # Global index of all epics and stories
+├── epics/
+│   └── HRAB-7000-team-collaboration/
+│       ├── epic.md                    # Epic definition
+│       └── stories/
+│           └── HRAB-7026-progress/
+│               ├── story.md           # Story definition + plan + tasks + state
+│               ├── acceptance-criteria.md
+│               └── decisions.md
+└── stories/
+    └── S1-quick-fix/
+        ├── story.md
+        ├── acceptance-criteria.md
+        └── decisions.md
+```
+
+### Key files
 
 | File | Purpose |
 |------|---------|
-| `plan.md` | Scope, strategy, assumptions, risks |
-| `tasks.md` | Task breakdown with dependencies and parallel flags |
+| `docs/progress.md` | Global index — all epics and stories with IDs, status, paths |
+| `story.md` | Unified story file: scope, plan, tasks, phase state, history |
 | `acceptance-criteria.md` | Testable criteria for verification |
-| `progress.md` | Current phase, completed/blocked items, phase history |
 | `decisions.md` | Implementation decisions with rationale |
+| `epic.md` | Epic definition: goals, scope, linked stories |
 
-These files are the source of truth — not chat memory. This is what makes the workflow resumable across sessions.
+`story.md` is the source of truth for each story — it combines what was previously `plan.md`, `progress.md`, and `tasks.md` into a single file. This is what makes the workflow resumable across sessions.
+
+## Migration from /feature
+
+The old `/feature` commands still work as deprecation wrappers that redirect to `/story`. Existing `docs/features/` directories are detected by `/workflow-setup`, which can help migrate them to the new structure.
 
 ## Building for distribution
 
@@ -80,7 +145,7 @@ These files are the source of truth — not chat memory. This is what makes the 
 ./scripts/build-plugin.sh
 ```
 
-Produces a clean `dist/feature-workflow/` directory ready for publishing.
+Produces a clean `dist/dev-workflow/` directory ready for publishing.
 
 ## License
 

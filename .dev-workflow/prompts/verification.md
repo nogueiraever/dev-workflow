@@ -1,20 +1,19 @@
 # Verification Prompt
 
-You are executing Phase 5 of the autonomous feature workflow. All tasks are done. You must now verify the implementation against acceptance criteria.
+You are executing Phase 5 of the autonomous story workflow. All tasks are done. You must now verify the implementation against acceptance criteria.
 
 ## Context
 
 Read:
 - `acceptance-criteria.md` — the criteria to verify against
-- `tasks.md` — confirm all tasks are done
-- `plan.md` — verify scope coverage
+- `story.md` — confirm all tasks are done (Tasks section) and verify scope coverage (plan sections)
 - `decisions.md` — understand any deviations
 
 ## Instructions
 
 ### Step 1: Verify Task Completion
 
-Check `tasks.md`:
+Check `story.md` Tasks section:
 - Are all tasks `done`?
 - Any still `in_progress` or `todo`? → return to execution
 - Any `blocked`? → can the blocker be resolved now?
@@ -41,7 +40,7 @@ If the project has automated tooling:
 - Type checking: `pnpm tsc`, `npm run tsc`
 - Linting: `pnpm lint`, `npm run lint`
 
-Report results. Failing tests related to the feature are blocking.
+Report results. Failing tests related to the story are blocking.
 
 ### Step 4: Check for Regressions
 
@@ -52,18 +51,20 @@ Report results. Failing tests related to the feature are blocking.
 ### Step 5: Assess and Route
 
 **All criteria pass, no gaps:**
-- Update `progress.md`: `current_phase: closeout`
+- Update `story.md` frontmatter: `current_phase: closeout`
+- Update `docs/progress.md` Phase column to `closeout`
 - Proceed to closeout
 
 **Gaps found:**
-- Generate follow-up tasks in `tasks.md` for each gap
+- Generate follow-up tasks in `story.md` Tasks section for each gap
 - Link to failed acceptance criteria
-- Update `progress.md`: `current_phase: executing`
+- Update `story.md` frontmatter: `current_phase: executing`
+- Update `docs/progress.md` Phase column to `executing`
 - Return to execution phase
 
 ## Output
 
 - Each criterion in `acceptance-criteria.md` has a status (no `pending` remaining)
-- `progress.md` updated with verification results
+- `story.md` frontmatter updated with verification results
 - Follow-up tasks created if gaps found
 - Clear routing: closeout or back to execution

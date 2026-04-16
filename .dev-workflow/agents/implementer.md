@@ -25,7 +25,7 @@ Execute a single task by writing code that follows existing codebase patterns an
 
 ## Expected Inputs
 
-- Single task definition from `tasks.md` (ID, title, description, dependencies, linked plan items, notes)
+- Single task definition from the Tasks section in `story.md` (ID, title, description, dependencies, linked criteria, notes)
 - Relevant file paths and code context
 - Project conventions (from CLAUDE.md or codebase exploration)
 

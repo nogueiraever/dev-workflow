@@ -21,17 +21,18 @@ Convert an approved plan into concrete, executable tasks with dependency mapping
 - Task descriptions must include: what to do, where (files/modules), and how to verify
 - Never create circular dependencies
 - All task IDs must be sequential: T1, T2, T3...
-- Update frontmatter counters: `total_tasks`, `completed: 0`, `blocked: 0`
+- Update `story.md` frontmatter counters: `total_tasks`, `completed_tasks: 0`, `blocked_tasks: 0`
+- Tasks are written as `### T{N}:` headings in the Tasks section of `story.md`
 
 ## Expected Inputs
 
-- Approved `plan.md` (status: approved)
+- Approved plan sections in `story.md` (status: approved)
 - `acceptance-criteria.md`
 - Codebase structure (from exploring existing files and patterns)
 
 ## Expected Outputs
 
-- Completed `tasks.md` with:
+- Completed Tasks section in `story.md` with:
   - Execution order diagram
-  - All tasks defined with: ID, Title, Description, Status, Dependency IDs, Parallelizable flag, Linked Plan Items, Notes
-- Updated `progress.md` with phase transition
+  - All tasks defined with: ID, Title, Description, Status, Dependency IDs, Parallelizable flag, Linked Criteria, Notes
+- Updated `story.md` frontmatter with phase transition and task counters

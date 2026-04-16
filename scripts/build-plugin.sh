@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build the feature-workflow plugin for distribution.
+# Build the dev-workflow plugin for distribution.
 # Packages only the plugin-required files into a clean output directory.
 #
 # Usage:
 #   ./scripts/build-plugin.sh [output-dir]
 #
-# Default output: ./dist/feature-workflow/
+# Default output: ./dist/dev-workflow/
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-OUTPUT_DIR="${1:-$REPO_ROOT/dist/feature-workflow}"
+OUTPUT_DIR="${1:-$REPO_ROOT/dist/dev-workflow}"
 
-echo "Building feature-workflow plugin..."
+echo "Building dev-workflow plugin..."
 echo "  Source: $REPO_ROOT"
 echo "  Output: $OUTPUT_DIR"
 
@@ -27,17 +27,20 @@ cp -R "$REPO_ROOT/.claude-plugin" "$OUTPUT_DIR/.claude-plugin"
 # --- Skills (the slash commands) ---
 cp -R "$REPO_ROOT/skills" "$OUTPUT_DIR/skills"
 
-# --- Workflow infrastructure (bundled for /feature-setup to copy into projects) ---
+# --- Workflow infrastructure (bundled for /workflow-setup to copy into projects) ---
 cp -R "$REPO_ROOT/.dev-workflow" "$OUTPUT_DIR/.dev-workflow"
 
-# --- Feature templates (bundled for /feature-setup to copy into projects) ---
-mkdir -p "$OUTPUT_DIR/docs/features"
-cp -R "$REPO_ROOT/docs/features/_template" "$OUTPUT_DIR/docs/features/_template"
+# --- Install script ---
+cp "$REPO_ROOT/install.sh" "$OUTPUT_DIR/install.sh"
+chmod +x "$OUTPUT_DIR/install.sh"
 
 # --- Documentation ---
-if [ -f "$REPO_ROOT/readme.md" ]; then
-  cp "$REPO_ROOT/readme.md" "$OUTPUT_DIR/README.md"
-fi
+for f in README.md readme.md; do
+  if [ -f "$REPO_ROOT/$f" ]; then
+    cp "$REPO_ROOT/$f" "$OUTPUT_DIR/README.md"
+    break
+  fi
+done
 
 # --- Summary ---
 echo ""
@@ -50,8 +53,8 @@ echo ""
 echo "Total files: $(find "$OUTPUT_DIR" -type f | wc -l | tr -d ' ')"
 echo ""
 echo "To install locally:"
-echo "  Copy $OUTPUT_DIR to ~/.claude/plugins/feature-workflow/"
+echo "  cd $OUTPUT_DIR && ./install.sh"
 echo ""
 echo "To distribute via git:"
 echo "  Push the output directory to a GitHub repo, then users install with:"
-echo "  /plugin install feature-workflow@<marketplace>"
+echo "  git clone <repo> && cd <repo> && ./install.sh"
