@@ -1,6 +1,6 @@
 ---
 name: epic
-description: "Manage epics — large initiatives that group related stories. Create, list, resume, and track epics with linked story status. When creating with a Jira ID, automatically imports child stories from Jira. Use: /epic create, /epic list, /epic <id>, /epic status <id>, /epic resume <id>."
+description: "Manage epics — large initiatives that group related stories. Create, list, resume, and track epics with linked story status. When creating with a Jira ID, automatically imports child stories from Jira, plans every story in parallel, and — after a single approval prompt — autonomously generates tasks and starts coding. Use: /epic create, /epic plan, /epic list, /epic <id>, /epic status <id>, /epic resume <id>."
 argument-hint: "[create [--id ID] [--title TITLE] [--no-import] [--no-plan] | plan <id> | list | status <id> | resume <id> | <id>]"
 allowed-tools:
   - Read
@@ -132,11 +132,13 @@ Write `epics/{id}-{slug}/epic.md` using the **Epic Template** below, filling in 
 
 If conditions are not met, skip to Step 7.
 
-Follow the **Jira Import Flow** defined below. This will:
+**This is a single continuous operation.** Follow the **Jira Import Flow** defined below in full — do NOT pause between its sub-steps and do NOT ask the user for confirmation before planning or executing. The Jira Import Flow handles:
 - Enrich `epic.md` with Jira data (summary, description, metadata)
 - Import child stories as local story directories
-- Plan each imported story (unless `--no-plan` was specified)
+- Plan each imported story (unless `--no-plan` was specified) — this runs sub-agents in parallel
 - Update the slug/directory name if a title was fetched from Jira and no `--title` was provided
+
+**After the Jira Import Flow returns, continue directly to Step 7 and Step 8 of this Create Flow without stopping.** The only user checkpoint in the entire Create Flow is the approval prompt in Step 8.
 
 ### 7. Initialize or update docs/progress.md
 
@@ -150,28 +152,97 @@ Follow the **Jira Import Flow** defined below. This will:
 
 ### 8. Present to the user
 
-**If stories were imported AND planned:**
-- Display the epic: ID, title, Jira status, owner, path
-- Display a table of imported stories: ID, Title, Jira Status, Local Phase, Key Scope Items
-- If any stories were skipped (already existed locally), list them separately
-- If any stories failed planning, list them with the reason
-- Present plans for approval (same flow as Plan Flow Step 6):
-  - "approve all" → advance all to `task_generation`
-  - Request changes to specific stories → suggest `/story resume <id>`
+Branch on the outcome of Steps 6–7:
 
-**If stories were imported but NOT planned (--no-plan):**
-- Display the epic: ID, title, Jira status, owner, path
-- Display a table of imported stories: ID, Title, Jira Status, Local Phase (`intake`)
+#### 8a. Stories imported AND planned
+
+Print a consolidated summary:
+
+```
+## Epic {id}: {title}
+Jira status: {jira_status} • Owner: {owner} • Path: {path}
+
+Planned {N} stories for approval:
+
+| ID | Title | Jira Status | Phase | Key Scope | Top Risks |
+|----|-------|-------------|-------|-----------|-----------|
+| ... | ... | ... | pending_approval | ... | ... |
+```
+
+If any stories were skipped (already existed locally), list them under "Skipped — already imported".
+If any stories failed planning, list them under "Failed planning — please run `/story resume <id>`".
+
+Then prompt the user:
+
+```
+Respond with one of:
+  • "approve all" — I'll start coding every story
+  • "approve <ID1>, <ID2>" — start coding only those; others wait
+  • "approve all except <ID>" — equivalent shorthand
+  • "change <ID>: <what to change>" — revise that story and re-present
+  • "cancel" — leave everything in pending_approval
+```
+
+**WAIT for the user's response. This is the only human checkpoint in `/epic create`.**
+
+##### Handling the response
+
+Parse the response into three sets: `approved`, `changes_requested` (with edit instructions per story), and `on_hold` (untouched). Then:
+
+1. **For each story in `changes_requested`:**
+   - Update `story.md` frontmatter: `current_phase: revising`, log in Phase History.
+   - Update `decisions.md` with the requested change and reason.
+   - Re-invoke a planner sub-agent (same contract as Step 6) with the change as additional instruction. When it returns, set `current_phase: pending_approval` and append the story back into the approval prompt for the next round.
+2. **For each story in `on_hold`:** leave `current_phase: pending_approval`. They can be resumed later via `/story resume <id>`.
+3. **For `approved`:** run the **Auto-Dispatch Block** below.
+
+##### Auto-Dispatch Block (approved stories only)
+
+Goal: take every approved story from `pending_approval` through `task_generation` → `executing` without further prompting, respecting concurrency safety.
+
+1. **Emit a status line:** `{M} stories approved. Choosing execution mode…`
+2. **Flip each approved story to `task_generation`** — update `story.md` frontmatter, Phase History row, and `docs/progress.md` Phase column.
+3. **Determine cross-story concurrency.** For the approved set, inspect each story's **Affected Pages / Modules** and **Related Backend Contracts / APIs** sections. Build a conflict graph:
+   - Edge = "these two stories touch overlapping files/modules" OR "story A's contract is consumed by story B".
+   - Independent clusters can run concurrently; connected stories must run sequentially, in producer-first order.
+4. **Select mode per cluster** using the [Claude Teams Capability Check](#claude-teams-capability-check):
+   - Cluster size 1 → `sequential` (trivially).
+   - Cluster size ≥2 AND stories are disjoint → `parallel-agents`, or `teams` when available and beneficial (e.g., FE+BE pair with a shared contract to align).
+   - Cluster with contract coupling → run the **Contract Alignment** step first: write the shared API shape (endpoint, request/response schema, error codes) into every participating story's `decisions.md`, then launch.
+5. **Log the decision** in `epic.md` under an "Execution Plan" note and in each story's `decisions.md` (mode + peers + reasoning).
+6. **Emit a status line:** `Execution plan: {N_parallel_pairs} parallel, {N_sequential} sequential. Generating tasks.`
+7. **Per-story pipeline** — for each story in the execution order:
+   - Flip `current_phase: task_generation` (already set above).
+   - Invoke a **task-breaker sub-agent** per the [task-breaker role](../story/references/agents/task-breaker.md) and the [phase-tasks instructions](../story/references/phase-tasks.md). Inputs: story.md, acceptance-criteria.md, CLAUDE.md. Post-condition: Tasks section populated, frontmatter `total_tasks` / `current_task` set.
+   - Flip `current_phase: executing`, update Phase History and `docs/progress.md`.
+   - Invoke **implementer sub-agent(s)** per the [implementer role](../story/references/agents/implementer.md) and the [phase-execution instructions](../story/references/phase-execution.md). Tasks marked `parallelizable: true` in `story.md` run as concurrent `Agent` calls; sequential tasks run one after another.
+   - When all tasks are done → flip `current_phase: verifying`. (Verification itself is the user's or a follow-up command's concern — do not auto-run `/story-verify` unless the user has asked for it elsewhere.)
+8. **Cross-story orchestration** — launch clusters according to step 4:
+   - `parallel-agents` clusters: issue concurrent `Agent` calls in a single message, one per story, with the per-story pipeline as the sub-agent's task.
+   - `teams` clusters: use the Teams capability (roles = one per story, shared context = the Contract Alignment block). Same pipeline inside.
+   - `sequential` clusters: run one story's pipeline to `verifying` before starting the next.
+9. **Report progress** after each story reaches `verifying` or blocks. Final summary after all clusters complete.
+
+**Stop only for:**
+- User interruption
+- Every approved story has reached `verifying` (done for this command)
+- A hard blocker in a story (missing access, repeated 3+ failures, plan conflict that needs the user); blocked stories are reported but do not block other clusters.
+
+#### 8b. Stories imported but NOT planned (`--no-plan`)
+
+- Display the epic header and the imported stories table (Phase = `intake`).
 - Note: "Stories have been imported but not yet planned."
-- Suggest: `/epic plan {id}` to plan all stories, or `/story resume <id>` to plan individually
+- Suggest: `/epic plan {id}` to plan all stories, or `/story resume <id>` to plan individually.
 
-**If no stories were found in Jira:**
-- Display the epic
-- Note: "No child stories found in Jira for {id}"
+#### 8c. No stories found in Jira
+
+- Display the epic.
+- Note: "No child stories found in Jira for {id}."
 - Ask: "Would you like to create a story within this epic?"
 
-**If import was skipped (--no-import or internal ID):**
-- Display the epic
+#### 8d. Import was skipped (`--no-import` or internal ID)
+
+- Display the epic.
 - Ask: "Would you like to create a story within this epic?"
 
 ---
@@ -271,37 +342,23 @@ For each story in the "to import" list:
    - Set `story` field to the story ID
    - Add initial decision D1: "Story imported from Jira epic {epic_id}" with reason "Automated import during epic creation"
 
-### Step 6: Plan Imported Stories (conditional)
+### Step 6: Plan Imported Stories
 
-**Skip this step if `--no-plan` was specified.** Stories will remain in `intake` phase, ready to be planned later via `/epic plan <id>` or `/story resume <id>`.
+**Skip this step ONLY if `--no-plan` was specified.** In that case, stories remain in `intake` and the user must later run `/epic plan <id>` or `/story resume <id>`. Otherwise, this step is **mandatory** — do not stop before completing it and do not ask the user for permission to run it.
 
-When `--no-plan` is NOT set, plan each imported story by running the planner agent:
+Imperative algorithm:
 
-1. **Explore the codebase once** — before planning individual stories, read the project's `CLAUDE.md`, understand the project structure, tech stack, conventions, and existing patterns. This context is shared across all story plans.
+1. **Emit a status line to the user:** `Imported N stories. Planning in parallel…`
+2. **Gather shared project context once** — read the project's root `CLAUDE.md` (and nearest sub-project CLAUDE.md if the epic targets a specific area) so sub-agents are not repeating the same exploration. Collect the paths; the content is read by each sub-agent.
+3. **Choose the execution mode** using the [Claude Teams Capability Check](#claude-teams-capability-check). For planning, prefer `teams` when available, otherwise `parallel-agents` (cap 3). Planning never uses `sequential` unless only one story exists.
+4. **Launch planner sub-agents** per the [Planning Sub-Agent Contract](#planning-sub-agent-contract). That contract defines the exact inputs, prompt, and post-conditions — do not restate them here.
+5. **Collect results.** Each sub-agent returns a short summary (id, scope bullets, top risks). Gather them for Step 8.
+6. **Reconcile global state:**
+   - Update `docs/progress.md` Phase column for every successfully planned story → `pending_approval`.
+   - For stories whose sub-agents failed, keep Phase as `intake` and record them in a "Failed Planning" list to surface in Step 8.
+7. **Emit a status line:** `Planning complete. Presenting for approval.`
 
-2. **Plan stories using sub-agents** — launch one sub-agent per story using the `Agent` tool. Each sub-agent receives:
-   - The story's `story.md` content (with Jira description already populated in Summary/Context)
-   - The epic's `epic.md` content (for overall goals/scope context)
-   - The planner agent role from [planner.md](../story/references/agents/planner.md)
-   - The phase-planning instructions from [phase-planning.md](../story/references/phase-planning.md)
-   - Project context: CLAUDE.md content, relevant file paths, conventions
-   - Instruction: "Plan this story. Fill in all plan sections of story.md (Scope, Out of Scope, Affected Pages/Modules, Related Backend Contracts/APIs, Assumptions, Dependencies, Risks, Implementation Plan). Generate acceptance-criteria.md. Do NOT ask clarifying questions — use the Jira description and codebase exploration to make reasonable assumptions and document them."
-
-   **Parallelism:** Launch up to 3 story planning sub-agents in parallel. When a batch completes, launch the next batch. This balances speed with resource usage.
-
-3. **Each sub-agent must:**
-   - Explore the codebase to find affected files, patterns, and related functionality
-   - Fill all plan sections in `story.md` based on the Jira description + codebase analysis
-   - Generate testable acceptance criteria in `acceptance-criteria.md`
-   - Update `story.md` frontmatter: `current_phase: pending_approval`
-   - Log the phase transitions in the Phase History table
-   - Log any significant assumptions in `decisions.md`
-
-4. **After all sub-agents complete:**
-   - Update `docs/progress.md` Phase column for each planned story (set to `pending_approval`)
-   - Collect any sub-agent errors and report them (partial planning is acceptable)
-
-Stories that fail planning remain in `intake` phase and can be planned later.
+**Do not stop here.** Proceed to Step 7, then Step 8 of the Create Flow.
 
 ### Step 7: Update epic.md Linked Stories Table
 
@@ -354,25 +411,12 @@ Before planning individual stories, gather shared context:
 
 ### 4. Plan Stories Using Sub-Agents
 
-For each unplanned story, launch a sub-agent using the `Agent` tool:
+Delegate to the [Planning Sub-Agent Contract](#planning-sub-agent-contract). That section defines the exact inputs, prompt, parallelism, and post-conditions for each planner sub-agent — do not restate them.
 
-Each sub-agent receives:
-- The story's `story.md` content
-- The epic's `epic.md` content (goals, scope context)
-- The planner agent role from [planner.md](../story/references/agents/planner.md)
-- The phase-planning instructions from [phase-planning.md](../story/references/phase-planning.md)
-- Project context gathered in Step 3
-- Instruction: "Plan this story. Fill in all plan sections of story.md (Scope, Out of Scope, Affected Pages/Modules, Related Backend Contracts/APIs, Assumptions, Dependencies, Risks, Implementation Plan). Generate acceptance-criteria.md. Do NOT ask clarifying questions — use the story description and codebase exploration to make reasonable assumptions and document them."
+Mode selection: use the [Claude Teams Capability Check](#claude-teams-capability-check) to pick `teams` or `parallel-agents` (cap 3). Log the mode in the epic's "Execution Plan" note and in each story's `decisions.md`.
 
-**Parallelism:** Launch up to 3 sub-agents in parallel. When a batch completes, launch the next batch.
-
-Each sub-agent must:
-- Explore the codebase for affected files, patterns, existing functionality
-- Fill all plan sections in `story.md`
-- Generate testable acceptance criteria in `acceptance-criteria.md`
-- Update `story.md` frontmatter: `current_phase: pending_approval`
-- Log phase transitions in the Phase History table
-- Log significant assumptions in `decisions.md`
+Emit a status line before launching: `Planning {N} unplanned stories in parallel…`
+Emit a status line after completion: `Planning complete. Presenting for approval.`
 
 ### 5. Update Global State
 
@@ -396,20 +440,19 @@ Planned {N} stories:
 
 {If any stories failed planning, list them here with the reason}
 
-Full plans are in each story's story.md file. You can:
-- Review and approve individual plans with `/story resume <id>`
-- Approve all plans at once by responding "approve all"
-- Request changes to specific stories
+Full plans are in each story's story.md file.
+
+Respond with one of:
+  • "approve all" — I'll start coding every story
+  • "approve <ID1>, <ID2>" — start coding only those; others wait
+  • "approve all except <ID>" — equivalent shorthand
+  • "change <ID>: <what to change>" — revise that story and re-present
+  • "cancel" — leave everything in pending_approval
 ```
 
-**If the user responds "approve all":**
-- For each planned story, update `story.md` frontmatter: `current_phase: task_generation`
-- Update `docs/progress.md` Phase column for all approved stories
-- Log the approval in each story's Phase History
+**WAIT for the user's response.**
 
-**If the user requests changes to specific stories:**
-- Note which stories need changes
-- Suggest: `/story resume <id>` for each story that needs revision
+Handle the response exactly as in **Create Flow → Step 8a → Handling the response** and run the same **Auto-Dispatch Block** for approved stories. Do not duplicate that logic here; refer to [Step 8a](#8a-stories-imported-and-planned).
 
 ---
 
@@ -537,6 +580,82 @@ When `docs/progress.md` does not exist, create it with this structure:
 - **Total stories:** 0
 - **Last updated:** ---
 ```
+
+---
+
+## Planning Sub-Agent Contract
+
+This block is the single source of truth for how the orchestrator plans a batch of imported or unplanned stories. It is referenced by **Create Flow → Jira Import Flow → Step 6** and by **Plan Flow → Step 4**. Do not duplicate this logic.
+
+### Inputs passed to each planner sub-agent
+
+- Absolute path to the story's `story.md` (so the agent can read and edit it)
+- Absolute path to the story's `acceptance-criteria.md`
+- Absolute path to the story's `decisions.md`
+- Absolute path to the parent `epic.md`
+- Path to the project's `CLAUDE.md` files (root + nearest to the story's likely target area)
+- The [planner agent role](../story/references/agents/planner.md) (pass as role instruction)
+- The [phase-planning instructions](../story/references/phase-planning.md) (pass as process instruction)
+- Explicit task prompt: *"Plan this story. Read the story.md (its Summary/Context already include the Jira description), the epic.md for overall goals, and explore the codebase (start from CLAUDE.md). Fill every plan section in story.md: Summary, Scope, Out of Scope, Affected Pages/Modules, Related Backend Contracts/APIs, Assumptions, Dependencies, Risks, Implementation Strategy. Write testable criteria into acceptance-criteria.md following the categories in phase-planning.md. Do NOT ask clarifying questions — make reasonable assumptions from the Jira description and the codebase, and record them in the Assumptions section and in decisions.md. When done, set story.md frontmatter current_phase to pending_approval, update last_updated, append a row to the Phase History table, and update the Phase column for this story in docs/progress.md. Return a short summary: story id, key scope bullets, top risks."*
+
+### Parallelism
+
+- Launch up to 3 planner sub-agents concurrently via the `Agent` tool (single message, multiple tool uses).
+- When a batch completes, launch the next batch until every story is processed.
+- The orchestrator MAY upgrade this to Claude Teams — see the [Claude Teams Capability Check](#claude-teams-capability-check) section.
+
+### Post-conditions (per story)
+
+- `story.md` frontmatter: `current_phase: pending_approval`, `last_updated` set, Phase History has a new row.
+- All plan sections in `story.md` are filled with concrete content (no template placeholders left).
+- `acceptance-criteria.md` has testable criteria covering every scope item.
+- `decisions.md` has entries for any non-trivial assumption.
+- `docs/progress.md` Phase column reflects `pending_approval` for the story.
+
+### Error handling
+
+- A sub-agent failure leaves its story in `intake` or `planning`. Log the failure, continue with the remaining stories, and surface the failed stories in the final summary so the user can re-run via `/story resume <id>` or `/epic plan <id>`.
+
+---
+
+## Claude Teams Capability Check
+
+The orchestrator may use Claude Teams whenever coordinated parallel sub-agents provide a clear benefit (parallel planning of many stories, parallel execution of disjoint stories, parallel verification). Teams is an optional capability — the workflow must work without it.
+
+### Capability check (run before choosing Teams)
+
+Before opting into Teams, the orchestrator checks availability. Use whichever of the following signals are present in the current Claude instance — if none are present, assume Teams is NOT available:
+
+1. A `ClaudeTeams*` / `Team*` tool is exposed in the current tool set.
+2. An environment variable or setting indicating Teams is enabled (e.g., `CLAUDE_TEAMS=1`, or an explicit entry in `.claude/settings.json`).
+3. A project-level CLAUDE.md directive like "Use Claude Teams for parallel story execution".
+
+Record the result of the check (available / unavailable) once per flow — do not re-check between stories in the same run.
+
+### Mode selection
+
+After the capability check, the orchestrator picks one of three modes for a given parallelizable batch:
+
+| Mode | When to use | How |
+|------|-------------|-----|
+| `teams` | Teams available AND the batch benefits from coordinated roles (e.g., a frontend/backend pair that must align on a contract, or 3+ stories needing shared scratch space). | Use the Teams tool/API with one agent per story (or per role) and the shared contract/spec as the shared context. |
+| `parallel-agents` | Teams unavailable OR the batch is simple disjoint work with no coordination needed. | Launch up to 3 concurrent sub-agents via the `Agent` tool in a single message. |
+| `sequential` | Stories share files/modules, or one story's output is the input for another, or parallelism is not safe. | Run one sub-agent at a time. |
+
+### Logging the decision
+
+Whenever the orchestrator launches a batch, log:
+
+- **In `epic.md`** under a new "Execution Plan" note: the batch, the chosen mode, and one sentence of reasoning.
+- **In each participating story's `decisions.md`**: the same mode and the peers it ran alongside (if any).
+
+This makes the concurrency decision auditable after the fact.
+
+### Fallback rules
+
+- Teams unavailable → downgrade to `parallel-agents`.
+- File-overlap risk detected in `parallel-agents` → downgrade to `sequential`.
+- Never block progress waiting for Teams to become available.
 
 ---
 
