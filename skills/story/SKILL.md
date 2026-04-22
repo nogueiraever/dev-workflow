@@ -1,6 +1,6 @@
 ---
 name: story
-description: "Autonomous story development workflow using Epic > Story > Task hierarchy. Manages the full SDLC lifecycle: intake, planning (with approval gate), task generation, parallel/sequential execution, verification, and closeout. All state persisted in markdown. Resumable across sessions. Use: /story create, /story resume <id>, /story <id>, /story list, /story status <id>. Use /task for in-progress story adjustments that need replanning + approval. Triggers on: start story, new story, resume story, continue story, story status."
+description: "Autonomous story development workflow using Epic > Story > Task hierarchy. Manages the full SDLC lifecycle: intake, planning (with approval gate), task generation, parallel/sequential execution, verification, and closeout. All state persisted in markdown. Resumable across sessions. Use: /story create, /story resume <id>, /story <id>, /story list, /story status <id>. Triggers on: start story, new story, resume story, continue story, story status."
 argument-hint: "[create [--id ID] [--epic EPIC] [--title TITLE] | resume <id> | <id> | list | status <id>]"
 allowed-tools:
   - Read
@@ -227,10 +227,8 @@ Valid transitions:
   pending_approval → revising           (user requested changes)
   revising         → pending_approval   (changes made, re-presenting)
   task_generation  → executing
-  executing        → pending_approval   (/task adjustment request replanned)
   executing        → verifying          (all tasks done)
-  executing        → executing          (new work discovered, replanned in-place)
-  verifying        → pending_approval   (/task adjustment request replanned)
+  executing        → executing          (new work discovered, replanned)
   verifying        → closeout           (all criteria pass)
   verifying        → executing          (gaps found, follow-up tasks created)
   closeout         → complete
@@ -240,8 +238,6 @@ Valid transitions:
 1. Update `story.md` frontmatter (`current_phase`, `last_updated`)
 2. Log the transition in the Phase History section of `story.md`
 3. Update `docs/progress.md` Phase column
-
-For explicit mid-execution user adjustments, use `/task` to run story-scoped replanning with an approval gate before returning to execution.
 
 ---
 

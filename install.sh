@@ -6,7 +6,7 @@ WORKFLOW_DIR="$HOME/.dev-workflow"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # New story/epic skills
-NEW_SKILLS=("story" "story-init" "story-tasks" "story-execute" "story-verify" "task" "epic" "workflow-setup")
+NEW_SKILLS=("story" "story-init" "story-tasks" "story-execute" "story-verify" "epic" "workflow-setup")
 
 # Legacy feature skills (kept as deprecation wrappers)
 LEGACY_SKILLS=("feature" "feature-init" "feature-tasks" "feature-execute" "feature-verify" "feature-setup")
@@ -57,7 +57,6 @@ echo "Restart Claude Code, then use:"
 echo "  /story create --id HRAB-123 --title \"My story\"  — start a new story"
 echo "  /story resume HRAB-123                           — resume a story by ID"
 echo "  /story list                                      — list active stories"
-echo "  /task Improve empty-state copy                  — adjust active story with approval gate"
 echo "  /epic create --id HRAB-100 --title \"My epic\"    — create an epic"
 echo "  /epic list                                       — list epics"
 echo "  /workflow-setup                                  — initialize a project"
