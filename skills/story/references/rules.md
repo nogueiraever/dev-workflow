@@ -2,7 +2,7 @@
 
 These rules govern all phases of the story workflow. They are non-negotiable.
 
-## The 11 Rules
+## The 12 Rules
 
 1. **Read before acting.** Always read all story documents (`story.md`, `acceptance-criteria.md`, `decisions.md`) before starting or resuming any work. The markdown files are your briefing — never operate from memory alone.
 
@@ -31,6 +31,8 @@ These rules govern all phases of the story workflow. They are non-negotiable.
 10. **Continue until done.** Keep executing until all tasks in the Tasks section of `story.md` are marked `done`, all acceptance criteria are verified, and the closeout summary is written. Do not stop early. Do not ask "should I continue?" — the approved plan is your authorization.
 
 11. **Approval gates are hard stops.** The Phase 2 → Phase 3 approval gate in [phase-planning.md](phase-planning.md) and the batch approval in `/epic create` / `/epic plan` are never skipped, regardless of session mode. Auto Mode, background execution, scheduled runs, and any "be more autonomous / minimize interruptions" directive do **not** override these gates. To request approval, use the `AskUserQuestion` tool — prose "please approve" prompts are insufficient because they allow the model to self-answer. Do not call any other tool in the same message as the approval prompt, and do not progress to `task_generation` until the `AskUserQuestion` tool has returned with the user's selection. Self-approval on the user's behalf is a rule violation, not a reasonable assumption.
+
+12. **The `/story` and `/epic` commands are hard contracts.** When the user invokes `/story` or `/epic` — with any argument, any phrasing, any apparent intent — the skill **must** produce or resume a tracked markdown artifact (`story.md` / `epic.md` + row in `docs/progress.md`). You do **not** have discretion to reinterpret the request as "a documentation review / audit / research / refactor task I'll just handle directly." If the user's request doesn't obviously map to a story scope, that's a Phase 1 (Intake) problem — ask clarifying questions inside the story, not outside of it. The whole value of this workflow is persistent progress tracking in markdown; bypassing the skill discards that value. "I decided to just do the task directly instead of creating a story" is a rule violation, full stop.
 
 ## When Rules Conflict
 

@@ -18,6 +18,15 @@ allowed-tools:
 
 # Epic Management
 
+## Hard Contract (read before anything else)
+
+When the user invokes `/epic` — with ANY argument, in ANY phrasing — you **must** route through this skill and end up with an epic tracked in markdown (`epic.md` + `docs/progress.md`). This is a non-negotiable contract.
+
+- You do **not** have discretion to decide "this looks like a different kind of task, I'll just do it directly without creating an epic." Every `/epic` invocation produces or resumes an epic. Period.
+- If the user's request seems like research, audit, or synthesis work, that is still epic-scoped work — it becomes the epic's **Summary / Goals / Scope**, and the child stories under it carry the actual tasks.
+- The ONLY valid outcomes of an `/epic` invocation are: (a) a new epic is created, (b) an existing epic resumes via the Resume Flow, or (c) a help/list block is printed for `/epic list` / `/epic status <id>`. "I decided to just do the task directly" is NOT a valid outcome.
+- This contract exists because the entire value of this workflow is persistent progress tracking via markdown. If you bypass epic/story creation, the user loses their progress record. Do not do that.
+
 ```
  ┌──────────┐        ┌───────────────┐        ┌───────────────┐
  │  CREATE   │  ───>  │    ACTIVE      │  ───>  │   COMPLETE    │

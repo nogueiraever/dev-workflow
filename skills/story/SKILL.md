@@ -15,6 +15,15 @@ allowed-tools:
 
 # Autonomous Story Workflow
 
+## Hard Contract (read before anything else)
+
+When the user invokes `/story` — with ANY argument, in ANY phrasing — you **must** route through this skill and end up with a story tracked in markdown (`story.md` + `docs/progress.md`). This is a non-negotiable contract.
+
+- You do **not** have discretion to decide "this looks like a documentation/review/research/chat task, so I'll just do it directly without creating a story." Every `/story` invocation produces or resumes a story. Period.
+- If the user's request seems like a different kind of work (review, audit, Q&A, refactor, exploration), that is still story work — it becomes the story's **Scope** and generates **Tasks**. The progress of that work is tracked in `story.md`, which is the whole point of this workflow.
+- The ONLY valid outcomes of a `/story` invocation are: (a) a new story is created and enters Phase 1 (Intake), (b) an existing story resumes at its current phase, or (c) a help block is printed for a non-command subcommand (e.g., `/story list`, `/story status <id>`). "I decided to just do the task directly" is NOT a valid outcome.
+- This contract exists because the entire value of this workflow is persistent progress tracking via markdown. If you bypass story creation, the user loses their progress record. Do not do that.
+
 ```
 ┌─────────┐   ┌──────────┐   ┌─────────────────┐   ┌────────────────┐   ┌───────────┐   ┌──────────┐   ┌──────────┐
 │  INTAKE  │ → │ PLANNING │ → │ APPROVAL (user)  │ → │ TASK GENERATION│ → │ EXECUTION │ → │ VERIFY   │ → │ CLOSEOUT │
