@@ -56,12 +56,12 @@ Log the transition in the Phase History section.
 
 Update `docs/progress.md` Phase column for this story.
 
-Present the plan to the user:
+Print a short plan summary to chat so the user has context alongside the approval prompt:
 
 ```
 ## Plan Ready for Review
 
-I've created the plan for story [id]: [title]. Here's a summary:
+Story [id]: [title]
 
 **What:** [one sentence]
 **Scope:** [key items]
@@ -70,28 +70,44 @@ I've created the plan for story [id]: [title]. Here's a summary:
 
 Full plan: {story-path}/story.md
 Acceptance criteria: {story-path}/acceptance-criteria.md
-
-Please review and respond with:
-- "approved" / "looks good" / "go ahead" → I'll generate tasks and begin autonomous execution
-- Your requested changes → I'll update the plan and re-present
 ```
 
-**STOP HERE AND WAIT FOR USER RESPONSE.**
+Then **request approval with the `AskUserQuestion` tool** (not with a prose prompt):
+
+- Question: `Approve the plan for story [id]?`
+- Header: `Plan approval`
+- Options:
+  1. `Approve` — "Generate tasks and begin autonomous execution."
+  2. `Request changes` — "Describe the changes in the free-form answer; I'll revise and re-present."
+  3. `Abort` — "Leave the story in pending_approval and stop."
+
+The `AskUserQuestion` tool forces a user turn. Do **not** call any other tool in the same message as the approval prompt, and do **not** continue to Phase 3 until the tool returns with the user's selection.
+
+#### Auto-Mode Exception (non-negotiable)
+
+This approval gate **MUST NOT** be bypassed even when the session has Auto Mode active or any other "be more autonomous" directive is in force. Plan approval is never a "routine decision" — it is a hard human checkpoint. The model does not have authority to self-approve on the user's behalf. If you find yourself reasoning "auto mode says minimize interruptions, so I'll assume approval," stop: that reasoning is wrong for this gate. See [rules.md](rules.md) Rule 11.
 
 ### 4. Handle User Response
 
-**If approved:**
+Read the answer returned by `AskUserQuestion`:
+
+**If the user chose `Approve` (or "Other" with clearly affirmative text like "approved" / "looks good" / "go ahead"):**
 - Update `story.md` frontmatter: `current_phase: task_generation`
 - Update `last_updated`
 - Log transition in Phase History section
 - Update `docs/progress.md` Phase column
 - Proceed immediately to Phase 3 (Task Generation)
 
-**If changes requested:**
+**If the user chose `Request changes` (or "Other" with change instructions):**
 - Update `story.md` frontmatter: `current_phase: revising`
 - Apply the requested changes to `story.md` plan sections and/or `acceptance-criteria.md`
 - Log what changed in `decisions.md`
-- Return to step 3 (re-present the updated plan)
+- Return to step 3 (re-present the updated plan via `AskUserQuestion`)
+
+**If the user chose `Abort`:**
+- Leave `story.md` frontmatter at `current_phase: pending_approval`
+- Log the abort in the Phase History section with a note
+- Stop. Do not enter Phase 3.
 
 ## Exit Criteria
 

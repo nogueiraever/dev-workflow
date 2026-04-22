@@ -1,7 +1,7 @@
 ---
 name: story
 description: "Autonomous story development workflow using Epic > Story > Task hierarchy. Manages the full SDLC lifecycle: intake, planning (with approval gate), task generation, parallel/sequential execution, verification, and closeout. All state persisted in markdown. Resumable across sessions. Use: /story create, /story resume <id>, /story <id>, /story list, /story status <id>. Triggers on: start story, new story, resume story, continue story, story status."
-argument-hint: "[create [--id ID] [--epic EPIC] [--title TITLE] | resume <id> | <id> | list | status <id>]"
+argument-hint: "[create [--id ID] [--epic EPIC] [--title TITLE] | resume <id> | <id> | <freeform description> | list | status <id>]"
 allowed-tools:
   - Read
   - Write
@@ -10,6 +10,7 @@ allowed-tools:
   - Glob
   - Grep
   - Agent
+  - AskUserQuestion
 ---
 
 # Autonomous Story Workflow
@@ -114,15 +115,25 @@ Parse `$ARGUMENTS` to determine mode:
 2. Follow the [resume algorithm](references/resume.md)
 3. Read all story files, determine current phase, continue from there
 
-### `/story <id>` — smart routing (resume or create)
+### `/story <arg>` — smart routing (resume, create-by-id, or create-from-description)
 
-1. Parse the argument. Determine if it looks like an ID:
-   - Matches pattern: `S<number>`, or contains a hyphen with letters+numbers (e.g., `HRAB-7026`)
-   - If not an ID pattern, treat as an unknown command and show help
+1. Classify the argument:
+   - **ID pattern** — matches `S<number>` or contains a hyphen with letters+numbers (e.g., `HRAB-7026`, `PLAT-42`). Short, no spaces, no URLs, no sentence-style text.
+   - **Freeform description** — anything else: a phrase, sentence, paragraph, or a description that contains spaces, URLs, `@path/` mentions, or file references. Treat as "the user is asking to start a new story, and this text is the seed context."
 
-2. Search `docs/progress.md` for a row where the ID column matches:
-   - **Found** → resume: resolve path, read story files, parse `current_phase` from `story.md`, follow [resume algorithm](references/resume.md), continue from that phase
-   - **Not found** → offer to create: "No story found with ID `<id>`. Would you like to create it? Use `/story create --id <id> --title \"<title>\"`"
+2. **If ID pattern:** search `docs/progress.md` for a row where the ID column matches:
+   - **Found** → resume: resolve path, read story files, parse `current_phase` from `story.md`, follow [resume algorithm](references/resume.md), continue from that phase.
+   - **Not found** → offer to create: "No story found with ID `<id>`. Would you like to create it? Use `/story create --id <id> --title \"<title>\"`" — then stop. Do not create the story automatically.
+
+3. **If freeform description:** route to **create-from-description** mode:
+   - Generate an internal ID (`S<N+1>` per the rule in `/story create`).
+   - Derive a provisional title from the first ~10 words of the description (strip URLs and `@` mentions for the slug; keep them in the description body).
+   - Create the story directory and `story.md` using the same template as `/story create`, with frontmatter `current_phase: intake` and the freeform text seeded into the Context section of `story.md` and into `decisions.md` as the originating brief.
+   - Register the row in `docs/progress.md`.
+   - **Enter Phase 1: Intake.** Intake's job is to ask clarifying questions (scope, acceptance criteria, out-of-scope, constraints) — never to start execution. The approval gate in Phase 2 (see [phase-planning.md](references/phase-planning.md) and [rules.md](references/rules.md) Rule 11) still applies.
+   - **Do NOT** skip intake, do NOT jump to `task_generation`, and do NOT start executing. A freeform argument is a *starting point for planning*, never a shortcut to execution. Auto Mode does not override this.
+
+Heuristic for the ID-vs-freeform classification: if the argument contains a space, a URL, an `@` file mention, a newline, or is longer than 40 characters, treat it as freeform. Otherwise try ID-pattern matching. When in doubt, prefer freeform — the worst case is an extra intake turn, not silent execution.
 
 ### `/story list` — list all stories
 

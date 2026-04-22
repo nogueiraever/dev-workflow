@@ -1,7 +1,7 @@
 ---
 name: epic
 description: "Manage epics — large initiatives that group related stories. Create, list, resume, and track epics with linked story status. When creating with a Jira ID, automatically imports child stories from Jira, plans every story in parallel, and — after a single approval prompt — autonomously generates tasks and starts coding. Use: /epic create, /epic plan, /epic list, /epic <id>, /epic status <id>, /epic resume <id>."
-argument-hint: "[create [--id ID] [--title TITLE] [--no-import] [--no-plan] | plan <id> | list | status <id> | resume <id> | <id>]"
+argument-hint: "[create [--id ID] [--title TITLE] [--no-import] [--no-plan] | plan <id> | list | status <id> | resume <id> | <id> | <freeform description>]"
 allowed-tools:
   - Read
   - Write
@@ -10,6 +10,7 @@ allowed-tools:
   - Glob
   - Grep
   - Agent
+  - AskUserQuestion
   - mcp__claude_ai_Atlassian__getAccessibleAtlassianResources
   - mcp__claude_ai_Atlassian__getJiraIssue
   - mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql
@@ -65,10 +66,23 @@ Parse `$ARGUMENTS` to determine the subcommand:
 1. Resolve `<id>` to an epic path via **ID Resolution**
 2. Follow the **Resume Flow** below
 
-### `/epic <id>` — smart routing
-1. Attempt **ID Resolution** for `<id>`
-2. **Found** → follow the **Resume Flow**
-3. **Not found** → tell the user no epic with that ID exists, offer to create one
+### `/epic <arg>` — smart routing (resume, create-by-id, or create-from-description)
+1. Classify the argument:
+   - **ID pattern** — matches `E<number>` or contains a hyphen with letters+numbers (e.g., `HRAB-8730`, `PLAT-12`). Short, no spaces, no URLs, no sentence-style text.
+   - **Freeform description** — anything else: a phrase, sentence, paragraph, or text containing spaces, URLs, `@path/` mentions, or file references. Treat as "the user is asking to create a new epic, and this text is the seed context."
+
+2. **If ID pattern:** attempt **ID Resolution** for the argument.
+   - **Found** → follow the **Resume Flow**.
+   - **Not found** → ask the user: "No epic with ID `<id>` exists locally. Would you like to create it with `/epic create --id <id>`?" Then stop. Do not create automatically.
+
+3. **If freeform description:** route to **Create Flow** with these seeds:
+   - No `--id` provided → generate an internal ID (`E<N+1>`) per Step 1 of Create Flow.
+   - Derive a provisional title from the first ~10 words of the description (strip URLs and `@` mentions for the slug; keep them in the description body).
+   - Do NOT run the Jira Import Flow (there's no Jira ID to import from). Skip Step 6.
+   - After creating `epic.md`, seed its **Summary** section with the freeform text so the intake context is preserved.
+   - Tell the user the epic was created and ask what to do next: create a story in it (`/story create --epic <id>`), import stories from Jira later (`--id <jira-epic-key>` on a re-run), or update the title. Do **not** auto-create stories and do **not** auto-plan.
+
+Heuristic for ID-vs-freeform classification: if the argument contains a space, a URL, an `@` file mention, a newline, or is longer than 40 characters, treat it as freeform. Otherwise try ID-pattern matching. When in doubt, prefer freeform — the worst case is an extra confirmation turn, not silent execution or an unwanted Jira fetch.
 
 ### `/epic` (no arguments) — same as list
 1. Follow the **List Flow** below
@@ -172,18 +186,21 @@ Planned {N} stories for approval:
 If any stories were skipped (already existed locally), list them under "Skipped — already imported".
 If any stories failed planning, list them under "Failed planning — please run `/story resume <id>`".
 
-Then prompt the user:
+Then **request approval with the `AskUserQuestion` tool** (not with a prose prompt):
 
-```
-Respond with one of:
-  • "approve all" — I'll start coding every story
-  • "approve <ID1>, <ID2>" — start coding only those; others wait
-  • "approve all except <ID>" — equivalent shorthand
-  • "change <ID>: <what to change>" — revise that story and re-present
-  • "cancel" — leave everything in pending_approval
-```
+- Question: `How do you want to proceed with the {N} planned stories?`
+- Header: `Epic approval`
+- Options:
+  1. `Approve all` — "Start coding every planned story."
+  2. `Approve a subset` — "Use the free-form answer to list the story IDs to approve (e.g., `HRAB-7026, HRAB-7028`). Others stay in pending_approval."
+  3. `Request changes` — "Use the free-form answer in the form `change <ID>: <what to change>`. I'll revise and re-present."
+  4. `Cancel` — "Leave every story in pending_approval and stop."
 
-**WAIT for the user's response. This is the only human checkpoint in `/epic create`.**
+This is the **only** human checkpoint in `/epic create`. Do not call any other tool in the same message as the approval prompt, and do not progress any story past `pending_approval` until the `AskUserQuestion` tool has returned with the user's selection.
+
+###### Auto-Mode Exception (non-negotiable)
+
+This batch approval gate **MUST NOT** be bypassed even when Auto Mode is active or any other "be more autonomous / minimize interruptions" directive is in force. Plan approval is never a "routine decision" — it is a hard human checkpoint. The model does not have authority to self-approve on the user's behalf. See [rules.md](../story/references/rules.md) Rule 11.
 
 ##### Handling the response
 
@@ -427,7 +444,7 @@ After all sub-agents complete:
 
 ### 6. Present Results for Approval
 
-Present a summary of all planned stories:
+Print a short summary of all planned stories to chat:
 
 ```
 ## Planning Complete for Epic {id}: {title}
@@ -441,16 +458,11 @@ Planned {N} stories:
 {If any stories failed planning, list them here with the reason}
 
 Full plans are in each story's story.md file.
-
-Respond with one of:
-  • "approve all" — I'll start coding every story
-  • "approve <ID1>, <ID2>" — start coding only those; others wait
-  • "approve all except <ID>" — equivalent shorthand
-  • "change <ID>: <what to change>" — revise that story and re-present
-  • "cancel" — leave everything in pending_approval
 ```
 
-**WAIT for the user's response.**
+Then **request approval with the `AskUserQuestion` tool** using the same question, header, and options defined in [Create Flow → Step 8a](#8a-stories-imported-and-planned) (Approve all / Approve a subset / Request changes / Cancel). Do not emit a prose "respond with one of…" prompt — the `AskUserQuestion` tool forces a real user turn and prevents self-approval.
+
+The same **Auto-Mode Exception** from Step 8a applies here: this gate must not be bypassed under Auto Mode or any "minimize interruptions" directive. See [rules.md](../story/references/rules.md) Rule 11.
 
 Handle the response exactly as in **Create Flow → Step 8a → Handling the response** and run the same **Auto-Dispatch Block** for approved stories. Do not duplicate that logic here; refer to [Step 8a](#8a-stories-imported-and-planned).
 

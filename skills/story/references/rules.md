@@ -2,7 +2,7 @@
 
 These rules govern all phases of the story workflow. They are non-negotiable.
 
-## The 10 Rules
+## The 11 Rules
 
 1. **Read before acting.** Always read all story documents (`story.md`, `acceptance-criteria.md`, `decisions.md`) before starting or resuming any work. The markdown files are your briefing — never operate from memory alone.
 
@@ -10,7 +10,7 @@ These rules govern all phases of the story workflow. They are non-negotiable.
 
 3. **No undefined work.** Never execute work that is not represented in `story.md` (in the plan sections or the Tasks section). If you discover something that needs doing, add it to the plan/tasks first, then execute. This ensures traceability and prevents scope creep.
 
-4. **Autonomous after approval.** Once the user approves the plan (Phase 2 → Phase 3 transition), proceed through task generation, execution, verification, and closeout without asking permission for each task. The approval covers the entire approved scope.
+4. **Autonomous after approval.** Once the user has **explicitly approved** the plan via the Phase 2 → Phase 3 approval gate (see Rule 11 for how approval is captured), proceed through task generation, execution, verification, and closeout without asking permission for each task. The approval covers the entire approved scope. This rule does **not** authorize self-approval: "autonomous after approval" means "autonomous only after a real user approval has been recorded."
 
 5. **Update story.md immediately.** After every completed, blocked, or changed task, update the task status in the Tasks section and the frontmatter counters (`completed_tasks`, `blocked_tasks`). Never batch task status updates — a crash between updates would lose state.
 
@@ -29,6 +29,8 @@ These rules govern all phases of the story workflow. They are non-negotiable.
    Everything else — including minor uncertainties, implementation details, and recoverable errors — should be handled by making a decision (logged in `decisions.md`) and continuing.
 
 10. **Continue until done.** Keep executing until all tasks in the Tasks section of `story.md` are marked `done`, all acceptance criteria are verified, and the closeout summary is written. Do not stop early. Do not ask "should I continue?" — the approved plan is your authorization.
+
+11. **Approval gates are hard stops.** The Phase 2 → Phase 3 approval gate in [phase-planning.md](phase-planning.md) and the batch approval in `/epic create` / `/epic plan` are never skipped, regardless of session mode. Auto Mode, background execution, scheduled runs, and any "be more autonomous / minimize interruptions" directive do **not** override these gates. To request approval, use the `AskUserQuestion` tool — prose "please approve" prompts are insufficient because they allow the model to self-answer. Do not call any other tool in the same message as the approval prompt, and do not progress to `task_generation` until the `AskUserQuestion` tool has returned with the user's selection. Self-approval on the user's behalf is a rule violation, not a reasonable assumption.
 
 ## When Rules Conflict
 
