@@ -35,6 +35,7 @@ skills/                # Claude Code slash commands
   story-tasks/         # Phase 3 only (task generation)
   story-execute/       # Phase 4 only (execution)
   story-verify/        # Phase 5 only (verification)
+  task/                # Minor story-scoped adjustments with planning + approval gate
   epic/                # Epic management (create, resume, list, status)
   workflow-setup/      # One-time project initialization
   feature/             # Deprecated — redirects to /story
@@ -154,8 +155,8 @@ intake → planning → pending_approval ←→ revising
 pending_approval → task_generation → executing ←→ verifying → closeout → complete
 ```
 
-`executing` can loop back to `executing` if new work is discovered (replan triggers).
-`verifying` can loop back to `executing` if gaps are found.
+`executing` can loop to `pending_approval` via `/task` when minor story adjustments are requested.
+`verifying` can also loop to `pending_approval` for approved follow-up adjustments.
 
 ## Parallel Execution
 
@@ -178,6 +179,7 @@ On `/story resume <id>`:
 - `/story <id>` — Smart routing (resume if exists, offer create if not)
 - `/story list` — List all stories
 - `/story status <id>` — Detailed story status
+- `/task [--story <id>] <request>` — Add a small adjustment to the active story, run planner with story context, and wait for approval before execution
 
 ### Epic commands
 - `/epic create [--id X] [--title "Z"] [--no-import] [--no-plan]` — Create an epic. When `--id` is an external Jira ID, automatically fetches epic details, imports all child stories, and plans each story (fills plan sections, generates acceptance criteria). Use `--no-import` to skip Jira fetch, `--no-plan` to import without planning.

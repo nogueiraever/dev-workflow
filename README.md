@@ -71,6 +71,15 @@ Resolves the story from `docs/progress.md` and picks up exactly where the previo
 
 Lists all stories with their current phase, owner, and epic association.
 
+### Add a minor adjustment to the current story
+
+```
+/task Improve empty-state copy and keep current behavior
+```
+
+Use this while a story is already in progress to add a small, story-scoped adjustment.
+`/task` replans the adjustment with the current story context and pauses at approval before executing.
+
 ### Create an epic
 
 ```
@@ -93,6 +102,7 @@ For when you want to run a single phase:
 | `/story-tasks <id>` | Task generation only |
 | `/story-execute <id>` | Execution only |
 | `/story-verify <id>` | Verification only |
+| `/task [--story <id>] <request>` | Plan a minor adjustment for an in-progress story (approval required before execution) |
 
 ### Project setup
 
