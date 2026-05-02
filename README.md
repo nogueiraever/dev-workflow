@@ -16,9 +16,9 @@ Default skill directories:
 
 - Claude Code: `~/.claude/skills/`
 - Codex: `~/.codex/skills/`
-- OpenCode: `~/.opencode/skills/`
+- OpenCode: `~/.config/opencode/skills/`
 
-You can override them with `CLAUDE_SKILLS_DIR`, `CODEX_SKILLS_DIR`, and `OPENCODE_SKILLS_DIR`.
+OpenCode also needs slash-command wrappers under `~/.config/opencode/commands/` so commands like `/story` trigger the matching skill. Override install targets with `CLAUDE_SKILLS_DIR`, `CODEX_SKILLS_DIR`, `OPENCODE_SKILLS_DIR`, and `OPENCODE_COMMANDS_DIR`.
 
 The script also copies workflow infrastructure to `~/.dev-workflow/`. Restart your selected tool(s) after installing.
 

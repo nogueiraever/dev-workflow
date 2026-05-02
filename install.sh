@@ -6,7 +6,8 @@ WORKFLOW_DIR="$HOME/.dev-workflow"
 
 CLAUDE_SKILLS_DIR="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
 CODEX_SKILLS_DIR="${CODEX_SKILLS_DIR:-$HOME/.codex/skills}"
-OPENCODE_SKILLS_DIR="${OPENCODE_SKILLS_DIR:-$HOME/.opencode/skills}"
+OPENCODE_SKILLS_DIR="${OPENCODE_SKILLS_DIR:-$HOME/.config/opencode/skills}"
+OPENCODE_COMMANDS_DIR="${OPENCODE_COMMANDS_DIR:-$HOME/.config/opencode/commands}"
 
 # New story/epic skills
 NEW_SKILLS=("story" "story-init" "story-tasks" "story-execute" "story-verify" "epic" "workflow-setup")
@@ -41,6 +42,54 @@ install_skills() {
   done
 
   echo "  ${#ALL_SKILLS[@]} skills -> $skills_dir"
+}
+
+command_description() {
+  case "$1" in
+    story) echo "Run the story workflow" ;;
+    story-init) echo "Run story intake and planning" ;;
+    story-tasks) echo "Generate tasks for an approved story" ;;
+    story-execute) echo "Execute story tasks" ;;
+    story-verify) echo "Verify a story implementation" ;;
+    epic) echo "Manage workflow epics" ;;
+    workflow-setup) echo "Initialize story workflow files" ;;
+    feature) echo "Deprecated: use story" ;;
+    feature-init) echo "Deprecated: use story-init" ;;
+    feature-tasks) echo "Deprecated: use story-tasks" ;;
+    feature-execute) echo "Deprecated: use story-execute" ;;
+    feature-verify) echo "Deprecated: use story-verify" ;;
+    feature-setup) echo "Deprecated: use workflow-setup" ;;
+    *) echo "Run dev-workflow skill $1" ;;
+  esac
+}
+
+install_opencode_commands() {
+  echo "Installing OpenCode slash commands..."
+
+  mkdir -p "$OPENCODE_COMMANDS_DIR"
+  for skill in "${ALL_SKILLS[@]}"; do
+    local target="$OPENCODE_COMMANDS_DIR/$skill.md"
+    local description
+    description="$(command_description "$skill")"
+
+    if [ -L "$target" ] || [ -f "$target" ]; then
+      rm -f "$target"
+    fi
+
+    cat > "$target" <<EOF
+---
+description: $description
+---
+
+You are handling the OpenCode slash command \`/$skill\` for the dev-workflow plugin.
+
+First call the \`skill\` tool with name \`$skill\`. After it loads, follow that skill exactly as the source of truth for this command. Treat the arguments below as \`\$ARGUMENTS\` for the loaded skill.
+
+Arguments: \$ARGUMENTS
+EOF
+  done
+
+  echo "  ${#ALL_SKILLS[@]} commands -> $OPENCODE_COMMANDS_DIR"
 }
 
 install_workflow() {
@@ -81,7 +130,10 @@ for tool in "${SELECTED_TOOLS[@]}"; do
   case "$tool" in
     claude) install_skills "Claude Code" "$CLAUDE_SKILLS_DIR" ;;
     codex) install_skills "Codex" "$CODEX_SKILLS_DIR" ;;
-    opencode) install_skills "OpenCode" "$OPENCODE_SKILLS_DIR" ;;
+    opencode)
+      install_skills "OpenCode" "$OPENCODE_SKILLS_DIR"
+      install_opencode_commands
+      ;;
   esac
 done
 
