@@ -10,7 +10,17 @@ cd dev-workflow
 ./install.sh
 ```
 
-This symlinks skills into `~/.claude/skills/` and copies workflow infrastructure to `~/.dev-workflow/`. Restart Claude Code after installing.
+This installer now supports **Claude Code**, **Codex**, and **OpenCode**. It asks where to install and can install on all three at once.
+
+Default skill directories:
+
+- Claude Code: `~/.claude/skills/`
+- Codex: `~/.codex/skills/`
+- OpenCode: `~/.opencode/skills/`
+
+You can override them with `CLAUDE_SKILLS_DIR`, `CODEX_SKILLS_DIR`, and `OPENCODE_SKILLS_DIR`.
+
+The script also copies workflow infrastructure to `~/.dev-workflow/`. Restart your selected tool(s) after installing.
 
 To update, just `git pull` in the cloned repo — the symlink keeps the plugin current.
 
