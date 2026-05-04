@@ -1,6 +1,6 @@
 ---
 name: workflow-setup
-description: "Initialize the story workflow in the current project. Copies .dev-workflow/ (agents, orchestrators, prompts, rules, templates) into the project and creates the initial directory structure (docs/, docs/progress.md, epics/, stories/). Run this once per project before using /story. Safe to re-run -- only copies missing files unless --force is used."
+description: "Initialize the story workflow in the current project. Copies .dev-workflow/ (agents, orchestrators, prompts, rules, templates) into the project and creates the initial directory structure (docs/, docs/progress.md, docs/epics/, docs/stories/). Run this once per project before using /story. Safe to re-run -- only copies missing files unless --force is used."
 argument-hint: "[--force]"
 allowed-tools:
   - Read
@@ -18,7 +18,7 @@ Initialize the autonomous story workflow in the current project.
 Sets up two things:
 
 1. **`.dev-workflow/`** -- workflow infrastructure (agents, orchestrators, prompts, rules, templates) that guide the `/story` workflow
-2. **Directory structure** -- `docs/`, `epics/`, `stories/` directories and the global `docs/progress.md` index
+2. **Directory structure** -- `docs/`, `docs/epics/`, `docs/stories/` directories and the global `docs/progress.md` index
 
 These must exist in the project for `/story` and its sub-commands to work.
 
@@ -41,8 +41,8 @@ Determine what already exists in the target project (current working directory):
 - `.dev-workflow/` directory and its contents
 - `docs/` directory
 - `docs/progress.md` file
-- `epics/` directory
-- `stories/` directory
+- `docs/epics/` directory
+- `docs/stories/` directory
 
 Parse `$ARGUMENTS` for flags:
 - **`--force`**: Overwrite existing files with the latest versions from the plugin bundle
@@ -85,8 +85,8 @@ Create the following directories if they don't exist:
 ```
 docs/                   # Root docs directory
 docs/progress.md        # Global story index (create from template if missing)
-epics/                  # Epic directories will live here
-stories/                # Standalone story directories will live here
+docs/epics/             # Epic directories will live here
+docs/stories/           # Standalone story directories will live here
 ```
 
 **For `docs/progress.md`:** If it doesn't exist, create it with the standard header:
@@ -136,8 +136,8 @@ Copied:
 Created:
   docs/                       -- documentation root
   docs/progress.md            -- global story index
-  epics/                      -- epic directories
-  stories/                    -- standalone story directories
+  docs/epics/                 -- epic directories
+  docs/stories/               -- standalone story directories
 
 You can now use:
   /story create --id <id> --title "..."  -- start a new story
@@ -169,4 +169,4 @@ Note: docs/progress.md was preserved (contains live state).
 - **With `--force`**, it overwrites all `.dev-workflow/` files (useful after plugin updates) but never overwrites `docs/progress.md` since that contains live story tracking state.
 - The `.dev-workflow/` files are reference material -- you can customize them per project after copying. Running with `--force` later will overwrite your customizations.
 - Unlike the old `feature-setup`, this does NOT copy `docs/features/_template/`. Story templates live in `.dev-workflow/templates/` instead.
-- The `epics/` and `stories/` directories are created at the project root alongside `docs/`.
+- The `docs/epics/` and `docs/stories/` directories are created under `docs/`.
