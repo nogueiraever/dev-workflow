@@ -104,7 +104,7 @@ Given an ID string:
 1. Read `docs/progress.md` — if it does not exist, no epics exist yet, return not found
 2. Search the **Epics** table for a row where the **ID** column matches the given ID (case-insensitive)
 3. If found, return the **Path** column value
-4. If not found, also try matching against directory names under `epics/` (the ID may appear as a prefix like `HRAB-7000-team-collaboration`)
+4. If not found, also try matching against directory names under `docs/epics/` (the ID may appear as a prefix like `HRAB-7000-team-collaboration`)
 5. If still not found, return not found
 
 ---
@@ -140,12 +140,12 @@ Given an ID string:
 ### 4. Create the directory structure
 
 ```bash
-mkdir -p epics/{id}-{slug}/stories
+mkdir -p docs/epics/{id}-{slug}/stories
 ```
 
 ### 5. Create epic.md
 
-Write `epics/{id}-{slug}/epic.md` using the **Epic Template** below, filling in all frontmatter fields and section stubs.
+Write `docs/epics/{id}-{slug}/epic.md` using the **Epic Template** below, filling in all frontmatter fields and section stubs.
 
 ### 6. Jira Import (conditional)
 
@@ -167,9 +167,9 @@ If conditions are not met, skip to Step 7.
 
 - If `docs/progress.md` does not exist, create it using the **Progress Template** below
 - Add a row to the **Epics** table:
-  `| {id} | {id_source} | {title} | draft | {owner} | 0/0 | epics/{id}-{slug}/ |`
+  `| {id} | {id_source} | {title} | draft | {owner} | 0/0 | docs/epics/{id}-{slug}/ |`
 - If stories were imported in Step 6, add a row to the **Stories** table for each:
-  `| {story_id} | external | {story_title} | active | {owner} | {epic_id} | intake | epics/{epic_id}-{slug}/stories/{story_id}-{story_slug}/ |`
+  `| {story_id} | external | {story_title} | active | {owner} | {epic_id} | intake | docs/epics/{epic_id}-{slug}/stories/{story_id}-{story_slug}/ |`
 - Update the **Summary** section counts and `Last updated` timestamp
 - If stories were imported, update the Stories count in the epic's row (e.g., `0/5`)
 
@@ -342,7 +342,7 @@ For each story in the "to import" list:
 
 1. **Build the story slug**: lowercase Jira summary, replace spaces with hyphens, strip special chars, collapse hyphens, max 50 chars
 
-2. **Create the directory**: `epics/{epic_id}-{epic_slug}/stories/{story_id}-{story_slug}/`
+2. **Create the directory**: `docs/epics/{epic_id}-{epic_slug}/stories/{story_id}-{story_slug}/`
 
 3. **Create `story.md`** from the story template (`~/.dev-workflow/templates/story.md`):
    - `id`: Jira issue key (e.g., `HRAB-7026`)
@@ -713,7 +713,7 @@ When suggesting a transition, explain why and ask the user to confirm before mak
 
 - **docs/progress.md missing:** Create it on epic creation; report "no epics" on list/status/resume
 - **Epic directory not found for resolved ID:** Report the inconsistency, suggest checking `docs/progress.md` for stale entries
-- **Malformed progress.md:** Report the issue, attempt to reconstruct from `epics/` directory scan
+- **Malformed progress.md:** Report the issue, attempt to reconstruct from `docs/epics/` directory scan
 - **Duplicate ID:** Refuse to create, report the existing epic with that ID
 
 ### Jira Import Errors

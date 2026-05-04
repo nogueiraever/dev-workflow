@@ -81,7 +81,7 @@ Parse `$ARGUMENTS` to determine mode:
    - If no title provided yet, use the ID as a temporary slug
 
 4. **Determine story path:**
-   - If `--epic` provided: `epics/{epic-id}-{epic-slug}/stories/{story-id}-{slug}/`
+   - If `--epic` provided: `docs/epics/{epic-id}-{epic-slug}/stories/{story-id}-{slug}/`
    - If no `--epic`: `docs/stories/{story-id}-{slug}/`
 
 5. **Create story directory and files:**
@@ -369,7 +369,7 @@ For execution phase resume: also parse `current_task` and task statuses from the
 **Story data (per-project, relative to project root):**
 - Global index: `docs/progress.md`
 - Standalone stories: `docs/stories/{story-id}-{slug}/`
-- Epic stories: `epics/{epic-id}-{slug}/stories/{story-id}-{slug}/`
+- Epic stories: `docs/epics/{epic-id}-{slug}/stories/{story-id}-{slug}/`
 - Files per story: `story.md`, `acceptance-criteria.md`, `decisions.md`, `notes.md` (optional)
 
 **Workflow infrastructure (bundled with plugin):**

@@ -110,27 +110,27 @@ For when you want to run a single phase:
 /workflow-setup
 ```
 
-One-time command to initialize workflow infrastructure in your project (copies `.dev-workflow/`, creates `docs/progress.md`, `epics/`, `stories/` directories).
+One-time command to initialize workflow infrastructure in your project (copies `.dev-workflow/`, creates `docs/progress.md`, `docs/epics/`, `docs/stories/` directories).
 
 ## File structure
 
-```
+``` 
 project/
 ├── docs/
-│   └── progress.md                    # Global index of all epics and stories
-├── epics/
-│   └── HRAB-7000-team-collaboration/
-│       ├── epic.md                    # Epic definition
-│       └── stories/
-│           └── HRAB-7026-progress/
-│               ├── story.md           # Story definition + plan + tasks + state
-│               ├── acceptance-criteria.md
-│               └── decisions.md
-└── stories/
-    └── S1-quick-fix/
-        ├── story.md
-        ├── acceptance-criteria.md
-        └── decisions.md
+│   ├── progress.md                    # Global index of all epics and stories
+│   ├── epics/
+│   │   └── HRAB-7000-team-collaboration/
+│   │       ├── epic.md                # Epic definition
+│   │       └── stories/
+│   │           └── HRAB-7026-progress/
+│   │               ├── story.md       # Story definition + plan + tasks + state
+│   │               ├── acceptance-criteria.md
+│   │               └── decisions.md
+│   └── stories/
+│       └── S1-quick-fix/
+│           ├── story.md
+│           ├── acceptance-criteria.md
+│           └── decisions.md
 ```
 
 ### Key files
